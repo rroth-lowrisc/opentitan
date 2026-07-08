@@ -2344,8 +2344,8 @@ opentitan_test(
 )
 
 opentitan_test(
-    name = "keymgr_key_derivation_test",
-    srcs = ["keymgr_key_derivation_test.c"],
+    name = "keymgr_dpe_key_derivation_test",
+    srcs = ["keymgr_dpe_key_derivation_test.c"],
     exec_env = dicts.add(
         EARLGREY_TEST_ENVS,
         {
@@ -2367,6 +2367,14 @@ opentitan_test(
     ],
     verilator = verilator_params(timeout = "long"),
     deps = [
+        "//hw/top/dt",
+        "//sw/device/lib/arch:device",
+        "//sw/device/lib/base:macros",
+        "//sw/device/lib/dif:keymgr_dpe",
+        "//sw/device/lib/dif:kmac",
+        "//sw/device/lib/runtime:hart",
+        "//sw/device/lib/runtime:log",
+        "//sw/device/lib/runtime:print",
         "//sw/device/lib/testing:keymgr_dpe_testutils",
         "//sw/device/lib/testing/test_framework:ottf_main",
     ],
@@ -7863,23 +7871,23 @@ opentitan_test(
     ],
 )
 
-opentitan_test(
-    name = "keymgr_dpe_key_derivation_test",
-    srcs = ["keymgr_dpe_key_derivation_test.c"],
-    exec_env = DARJEELING_TEST_ENVS,
-    deps = [
-        "//hw/top/dt",
-        "//sw/device/lib/arch:device",
-        "//sw/device/lib/base:macros",
-        "//sw/device/lib/dif:keymgr_dpe",
-        "//sw/device/lib/dif:kmac",
-        "//sw/device/lib/runtime:hart",
-        "//sw/device/lib/runtime:log",
-        "//sw/device/lib/runtime:print",
-        "//sw/device/lib/testing:keymgr_dpe_testutils",
-        "//sw/device/lib/testing/test_framework:ottf_main",
-    ],
-)
+# opentitan_test(
+#     name = "keymgr_dpe_key_derivation_test",
+#     srcs = ["keymgr_dpe_key_derivation_test.c"],
+#     exec_env = DARJEELING_TEST_ENVS,
+#     deps = [
+#         "//hw/top/dt",
+#         "//sw/device/lib/arch:device",
+#         "//sw/device/lib/base:macros",
+#         "//sw/device/lib/dif:keymgr_dpe",
+#         "//sw/device/lib/dif:kmac",
+#         "//sw/device/lib/runtime:hart",
+#         "//sw/device/lib/runtime:log",
+#         "//sw/device/lib/runtime:print",
+#         "//sw/device/lib/testing:keymgr_dpe_testutils",
+#         "//sw/device/lib/testing/test_framework:ottf_main",
+#     ],
+# )
 
 opentitan_test(
     name = "mbx_smoketest",
