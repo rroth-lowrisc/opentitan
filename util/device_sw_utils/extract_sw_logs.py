@@ -130,8 +130,14 @@ def get_addr_strings(ro_contents):
     This function processes the read-only sections of the elf supplied as
     a list of ro_content tuples comprising of base addr, size and data in bytes
     and converts it into an {addr: (string, length} dict which is returned.
-    We preserve the original length of the string because the string may
-    go through cleanup methods which will alter it.'''
+
+    The addr stored in the dict is adjusted to account for any leading
+    whitespace characters that cleanup_newlines() strips from the raw bytes.
+    Without this adjustment, get_str_at_addr() would compute a non-zero offset
+    into the stripped string and return a substring that is missing the leading
+    characters of the actual format string (e.g. 'eymgrDpe...' instead of
+    'KeymgrDpe...') when a whitespace byte happens to precede it in the ELF
+    section.'''
     result = {}
     for ro_content in ro_contents:
         str_start = 0
@@ -146,11 +152,22 @@ def get_addr_strings(ro_contents):
             if str_start == str_end:
                 str_start += 1
                 continue
-            # Get full string address by adding base addr to the start.
-            addr = base_addr + str_start
-            length = str_end - str_start
-            string = cleanup_newlines(data[str_start:str_end].decode(
-                'utf-8', errors='replace'))
+            raw = data[str_start:str_end].decode('utf-8', errors='replace')
+            string = cleanup_newlines(raw)
+            if not string:
+                str_start = str_end + 1
+                continue
+            # cleanup_newlines() strips leading whitespace from the raw string.
+            # Compute how many leading bytes that removes so we can advance addr
+            # to point at the first character that actually appears in `string`.
+            # This ensures get_str_at_addr() returns string[0:] for an exact
+            # pointer match rather than string[1:] (which drops the first char).
+            n_leading_stripped = len(raw) - len(raw.lstrip())
+            addr = base_addr + str_start + n_leading_stripped
+            length = str_end - str_start - n_leading_stripped
+            if length <= 0:
+                str_start = str_end + 1
+                continue
             if addr in result:
                 exc_msg = "Error: duplicate {addr: string} pair encountered\n"
                 exc_msg += "addr: {} string: {}\n".format(addr, result[addr])
