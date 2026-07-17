@@ -593,8 +593,7 @@ static status_t personalize_gen_dice_certificates(ujson_t *uj) {
                                      &curr_pubkey));
   memcpy(&uds_pubkey, &curr_pubkey, sizeof(ecdsa_p256_public_key_t));
   TRY(otbn_boot_attestation_key_save(kDiceKeyUds.keygen_seed_idx,
-                                     kDiceKeyUds.type,
-                                     *kDiceKeyUds.keymgr_diversifier));
+                                     *kDiceKeyUds.keymgr_dpe_diversifier));
 
   // Build the certificate in a temp buffer, use all_certs for that.
   TRY(dice_uds_tbs_cert_build(
