@@ -27,7 +27,7 @@
 #include "sw/device/silicon_creator/lib/drivers/ast.h"
 #include "sw/device/silicon_creator/lib/drivers/hmac.h"
 #include "sw/device/silicon_creator/lib/drivers/ibex.h"
-#include "sw/device/silicon_creator/lib/drivers/keymgr.h"
+#include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/drivers/lifecycle.h"
 #include "sw/device/silicon_creator/lib/drivers/otp.h"
 #include "sw/device/silicon_creator/lib/drivers/pinmux.h"
@@ -102,6 +102,20 @@ static sigverify_otp_key_ctx_t sigverify_ctx;
 uint32_t flash_ecc_exc_handler_en;
 // A check value for the reset reason.
 uint32_t reset_reason_check;
+
+/**
+ * Keymgr dpe constant
+ */
+// TODO(#30777): Replace the hard-coded slot number
+// Slot Number must match with the ones defined in dice_chain.c!
+// Pre-defined slot id for the attestation / sealing key chain
+const uint32_t kKeymgrDPESealSlot = 0;
+const uint32_t kKeymgrDPEAttestSlot = 1;
+const sc_keymgr_dpe_policies_t kKeymgrDPEDefaultPolicy = {
+    .child = kScKeymgrDPESlotPolAllowChild,
+    .expo = kScKeymgrDPESlotPolNoExport,
+    .parent = kScKeymgrDPESlotPolEraseParent,
+};
 
 static inline bool rom_console_enabled(void) {
   return otp_read32(OTP_CTRL_PARAM_OWNER_SW_CFG_ROM_BANNER_EN_OFFSET) !=
@@ -506,8 +520,8 @@ static void rom_pre_boot_check(void) {
  * @return rom_error_t Result of the operation.
  */
 static rom_error_t rom_measure_otp_partitions(
-    keymgr_binding_value_t *measurement) {
-  memset(measurement, (int)rnd_uint32(), sizeof(keymgr_binding_value_t));
+    keymgr_dpe_binding_value_t *measurement) {
+  memset(measurement, (int)rnd_uint32(), sizeof(keymgr_dpe_binding_value_t));
   // These is no need to harden these data copies as any poisoning of the OTP
   // measurements will result in the derivation of a different UDS identity
   // which will not be endorsed. Hence we save the cycles of using sec_mmio.
@@ -554,31 +568,136 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                             uintptr_t imm_section_entry_point,
                             uint32_t nvm_exec) {
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomBoot, 1);
-  HARDENED_RETURN_IF_ERROR(sc_keymgr_state_check(kScKeymgrStateReset));
 
   boot_log_t *boot_log = &retention_sram_get()->creator.boot_log;
   boot_log->rom_ext_slot =
       manifest == boot_policy_manifest_a_get() ? kBootSlotA : kBootSlotB;
   boot_log_digest_update(boot_log);
 
-  keymgr_binding_value_t otp_measurement;
-  const keymgr_binding_value_t *attestation_measurement =
-      &manifest->binding_value;
+  // The attestation measurement is either the OTP measurement or the binding
+  // value from the manifest, depending on the OTP_MEAS_EN OTP switch.
+  keymgr_dpe_binding_value_t attestation_measurement;
   uint32_t use_otp_measurement =
       otp_read32(OTP_CTRL_PARAM_OWNER_SW_CFG_ROM_KEYMGR_OTP_MEAS_EN_OFFSET);
   if (launder32(use_otp_measurement) == kHardenedBoolTrue) {
     HARDENED_CHECK_EQ(use_otp_measurement, kHardenedBoolTrue);
-    rom_measure_otp_partitions(&otp_measurement);
-    attestation_measurement = &otp_measurement;
+    HARDENED_RETURN_IF_ERROR(
+        rom_measure_otp_partitions(&attestation_measurement));
   } else {
     HARDENED_CHECK_NE(use_otp_measurement, kHardenedBoolTrue);
+    memcpy(&attestation_measurement, &manifest->binding_value,
+           sizeof(attestation_measurement));
   }
-  sc_keymgr_sw_binding_set(&manifest->binding_value, attestation_measurement);
-  sc_keymgr_creator_max_ver_set(manifest->max_key_version);
-  SEC_MMIO_WRITE_INCREMENT(kScKeymgrSecMmioSwBindingSet +
-                           kScKeymgrSecMmioCreatorMaxVerSet);
 
-  sec_mmio_check_counters(/*expected_check_count=*/2);
+  // TODO(rroth): AttestationKeySeed consumed > protect against exfiltration
+  /*
+  flash_ctrl_cert_info_page_creator_cfg(&kFlashCtrlInfoPageAttestationKeySeeds);
+  flash_ctrl_cert_info_page_owner_restrict(
+      &kFlashCtrlInfoPageAttestationKeySeeds);
+  flash_ctrl_info_cfg_lock(&kFlashCtrlInfoPageAttestationKeySeeds);
+
+  SEC_MMIO_WRITE_INCREMENT(kFlashCtrlSecMmioCertInfoPageCreatorCfg);
+  SEC_MMIO_WRITE_INCREMENT(kFlashCtrlSecMmioCertInfoPageOwnerRestrict);
+  SEC_MMIO_WRITE_INCREMENT(kFlashCtrlSecMmioInfoCfgLock);
+  */
+
+  // TODO(rroth): Introduce flag to avoid bricking the keymgr_dpe if the entropy
+  // source doesn't work
+  // Prepare the kmac / keymgr_dpe and load the UDS
+  if(true == true){
+
+    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
+    // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
+    switch (launder32(lifecycle_state_get())) {
+      case kLcStateDev:
+      case kLcStateProd:
+      case kLcStateProdEnd:
+      case kLcStateRma:
+
+        // Initialize the entropy complex and KMAC for key manager operations.
+        // Note: `OTCRYPTO_OK.value` is equal to `kErrorOk` but we cannot add a static
+        // assertion here since its definition is not an integer constant expression.
+        HARDENED_RETURN_IF_ERROR(
+            (rom_error_t)entropy_complex_init(kHardenedBoolFalse).value);
+        HARDENED_RETURN_IF_ERROR(kmac_keymgr_configure());
+
+        // Set keymgr reseed interval. Start with the maximum value to avoid
+        // entropy complex contention during the boot process.
+        const uint16_t kScKeymgrDPEEntropyReseedInterval = UINT16_MAX;
+        sc_keymgr_dpe_entropy_reseed_interval_set(kScKeymgrDPEEntropyReseedInterval);
+        SEC_MMIO_WRITE_INCREMENT(kScKeymgrDPESecMmioReseedIntervalSet);
+
+        // Advance the keymgr dpe into the Available state and load the UDS in the
+        // selected DPE slot.
+        RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+        break;
+      default:
+        // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
+        // Problematic as otherwise the ROM could be bricked!
+        break;
+    }
+  } else {
+    // TODO(rroth): Do we need to load the UDS here too? Just ensure that the sw binding
+    // register are not cleared! Otherwise it could lock the full chip
+    // TODO(rroth): Bypass the CREATOR_ROOT_KEY generation according to issue ...
+    // Store the SW binding value for the attestation key
+    sc_keymgr_dpe_sw_binding_set(&attestation_measurement);
+  }
+
+  // Verify the values written by the sec_mmio... framework
+  sec_mmio_check_values(rnd_uint32());
+  sec_mmio_check_counters(/*expected_check_count=*/3);
+
+  // TODO(rroth): Introduce flag to avoid bricking the keymgr_dpe if the entropy
+  // source doesn't work
+  // Derive the CreatorRootKeys
+  if(true == true){
+
+    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
+    // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
+    switch (launder32(lifecycle_state_get())) {
+      case kLcStateDev:
+      case kLcStateProd:
+      case kLcStateProdEnd:
+      case kLcStateRma:
+
+        // Prepare the data to derive the sealing CreatorRootKey.
+        sc_keymgr_dpe_advance_data_t adv_sealing_data;
+        adv_sealing_data.sel_src_slot = kKeymgrDPESealSlot;
+        adv_sealing_data.sel_dst_slot = kKeymgrDPESealSlot;
+        adv_sealing_data.policy = kKeymgrDPEDefaultPolicy;
+        adv_sealing_data.binding_value = manifest->binding_value;
+        adv_sealing_data.version = manifest->max_key_version;
+
+        // Prepare the data to derive the attestation CreatorRootKey.
+        // Befor deriving the CreatorRootKey the driver loads the UDS
+        // into the attestation slot. Therefore, the source register
+        // points to an empty HW slot.
+        sc_keymgr_dpe_advance_data_t adv_attestation_data;
+        adv_attestation_data.sel_src_slot = kKeymgrDPEAttestSlot;
+        adv_attestation_data.sel_dst_slot = kKeymgrDPEAttestSlot;
+        adv_attestation_data.policy = kKeymgrDPEDefaultPolicy;
+        adv_attestation_data.binding_value = &attestation_measurement;
+        adv_attestation_data.version = manifest->max_key_version;
+
+        // Derive the attestation / sealing CreatorRootKey
+        SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSwBindingSet +
+                                      kScKeymgrDPESecMmioMaxVerSet +
+                                      kScKeymgrDPESecMmioSlotPolicy));
+        HARDENED_RETURN_IF_ERROR(
+            sc_keymgr_dpe_advance_creator(adv_sealing_data, adv_attestation_data));
+
+        break;
+      default:
+        // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
+        // Problematic as otherwise the ROM could be bricked!
+        break;
+    }
+  }
+
+  // Verify the values written by the sec_mmio... framework
+  sec_mmio_check_values(rnd_uint32());
+  sec_mmio_check_counters(/*expected_check_count=*/5);
 
   // Configure address translation, compute the epmp regions and the entry
   // point for the virtual address in case the address translation is enabled.
@@ -626,8 +745,9 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   nvm_ctrl_exec_set(nvm_exec);
   SEC_MMIO_WRITE_INCREMENT(kNvmCtrlSecMmioExecSet);
 
+  // one more "sec_mmio_check_counters" is run inside rom_pre_boot_check()!
   sec_mmio_check_values(rnd_uint32());
-  sec_mmio_check_counters(/*expected_check_count=*/5);
+  sec_mmio_check_counters(/*expected_check_count=*/8);
 
   // Jump to ROM_EXT entry point.
   enum {
