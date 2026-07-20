@@ -343,11 +343,39 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "keymgr_dpe",
+    srcs = ["keymgr_dpe.c"],
+    hdrs = ["keymgr_dpe.h"],
+    deps = [
+        "//hw/top:keymgr_dpe_c_regs",
+        "//hw/top/dt",
+        "//sw/device/lib/base:abs_mmio",
+        "//sw/device/lib/base:macros",
+        "//sw/device/lib/runtime:hart",
+        "//sw/device/lib/base:hardened_memory",
+        "//sw/device/silicon_creator/lib:error",
+        "//sw/device/silicon_creator/lib:keymgr_dpe_binding",
+        "//sw/device/silicon_creator/lib/base:sec_mmio",
+    ],
+)
+
 cc_test(
     name = "keymgr_unittest",
     srcs = ["keymgr_unittest.cc"],
     deps = [
         ":keymgr",
+        "//hw/top/dt",
+        "//sw/device/silicon_creator/testing:rom_test",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "keymgr_dpe_unittest",
+    srcs = ["keymgr_dpe_unittest.cc"],
+    deps = [
+        ":keymgr_dpe",
         "//hw/top/dt",
         "//sw/device/silicon_creator/testing:rom_test",
         "@googletest//:gtest_main",

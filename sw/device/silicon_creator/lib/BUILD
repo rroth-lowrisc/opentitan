@@ -250,8 +250,8 @@ opentitan_test(
 )
 
 cc_library(
-    name = "keymgr_binding",
-    hdrs = ["keymgr_binding_value.h"],
+    name = "keymgr_dpe_binding",
+    hdrs = ["keymgr_dpe_binding_value.h"],
 )
 
 cc_library(
