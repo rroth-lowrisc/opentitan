@@ -8,6 +8,7 @@
 #include "sw/device/lib/base/hardened.h"
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/coverage/api.h"
+#include "sw/device/lib/runtime/log.h"
 #include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
@@ -38,6 +39,7 @@ const sc_keymgr_dpe_policies_t kKeymgrDPEDefaultPolicy = {
 
 OT_WARN_UNUSED_RESULT
 static rom_error_t imm_section_start(void) {
+  LOG_INFO("imm_section_start: start");
   // Check the ePMP state.
   HARDENED_RETURN_IF_ERROR(epmp_state_check());
   // Check sec_mmio expectations.
@@ -73,17 +75,21 @@ static rom_error_t imm_section_start(void) {
       case kLcStateRma:
         // Generate the certificate related to UDS
         HARDENED_RETURN_IF_ERROR(dice_chain_attestation_creator_keygen());
+        LOG_INFO("imm_section_start: dice_chain_attestation_creator_keygen done");
 
         // Sideload sealing key to KMAC hw keyslot.
         HARDENED_RETURN_IF_ERROR(ownership_seal_init());
+        LOG_INFO("imm_section_start: ownership_seal_init done");
 
         dice_chain_init();
         dice_chain_immutable_section_check();
+        LOG_INFO("imm_section_start: dice_chain_init / immutable_section_check done");
 
         // The keymgr_dpe has loaded the attestation and sealing CreatorRootKey
         // inside the designated slots
         HARDENED_RETURN_IF_ERROR(
             dice_chain_attestation_owner_int(&boot_measurements.rom_ext, rom_ext));
+        LOG_INFO("imm_section_start: dice_chain_attestation_owner_int done");
 
         // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot hold keys
         // with boot stage set to BootStageOwner (2). (Note: Current bootstage + 1)
@@ -105,6 +111,7 @@ static rom_error_t imm_section_start(void) {
   // Make mutable part executable.
   HARDENED_RETURN_IF_ERROR(imm_section_epmp_mutable_rx(rom_ext));
 
+  LOG_INFO("imm_section_start: done");
   return kErrorOk;
 }
 

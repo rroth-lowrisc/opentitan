@@ -16,6 +16,7 @@
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/base/stdasm.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
+#include "sw/device/lib/runtime/log.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/base/static_critical_version.h"
@@ -510,7 +511,7 @@ static void rom_pre_boot_check(void) {
       rstmgr_info_en_check(retention_sram_get()->creator.reset_reasons));
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomPreBootCheck, 6);
 
-  sec_mmio_check_counters(/*expected_check_count=*/3);
+  sec_mmio_check_counters(/*expected_check_count=*/6);
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomPreBootCheck, 7);
 }
 
@@ -570,6 +571,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                             uintptr_t imm_section_entry_point,
                             uint32_t nvm_exec) {
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomBoot, 1);
+  LOG_INFO("rom_boot: start");
 
   boot_log_t *boot_log = &retention_sram_get()->creator.boot_log;
   boot_log->rom_ext_slot =
@@ -605,6 +607,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
 
   // Keymgr_dpe must be in the reset state
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateReset));
+  LOG_INFO("rom_boot: keymgr_dpe reset state check ok");
 
   // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey generation in the ROM section.
   if(true){
@@ -633,6 +636,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         // Advance the keymgr dpe into the Available state and load the UDS in the
         // selected DPE slot.
         HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+        LOG_INFO("rom_boot: keymgr_dpe advance_initial done");
 
         // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot stage set to
         // BootStageCreator (0). (Note: Current bootstage + 1)
@@ -699,6 +703,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                                       kScKeymgrDPESecMmioSlotPolicy));
         HARDENED_RETURN_IF_ERROR(
             sc_keymgr_dpe_advance_creator(adv_sealing_data, adv_attestation_data));
+        LOG_INFO("rom_boot: keymgr_dpe advance_creator done");
 
         // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot hold keys
         // with boot stage set to BootStageOwnerInt (1). (Note: Current bootstage + 1)
@@ -714,6 +719,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   // Verify the values written by the sec_mmio... framework
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/5);
+  LOG_INFO("SEC MMIO counter passed");
 
   // Configure address translation, compute the epmp regions and the entry
   // point for the virtual address in case the address translation is enabled.
@@ -747,23 +753,29 @@ static rom_error_t rom_boot(const manifest_t *manifest,
     default:
       HARDENED_TRAP();
   }
+  LOG_INFO("BS passed");
 
   // Unlock execution of ROM_EXT executable code (text) sections.
   HARDENED_RETURN_IF_ERROR(epmp_state_check());
   rom_epmp_unlock_rom_ext_rx(text_region);
+  LOG_INFO("EPMP checked");
 
   CFI_FUNC_COUNTER_PREPCALL(rom_counters, kCfiRomBoot, 2, kCfiRomPreBootCheck);
   rom_pre_boot_check();
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomBoot, 4);
   CFI_FUNC_COUNTER_CHECK(rom_counters, kCfiRomPreBootCheck, 8);
+  LOG_INFO("Bla 1");
 
   // Enable execution of code from flash if signature is verified.
   nvm_ctrl_exec_set(nvm_exec);
   SEC_MMIO_WRITE_INCREMENT(kNvmCtrlSecMmioExecSet);
+  LOG_INFO("Bla 2");
 
   // one more "sec_mmio_check_counters" is run inside rom_pre_boot_check()!
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/8);
+
+  LOG_INFO("rom_boot: jumping to rom_ext");
 
   // Jump to ROM_EXT entry point.
   enum {

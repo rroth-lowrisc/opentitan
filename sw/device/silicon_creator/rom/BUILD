@@ -164,6 +164,7 @@ cc_library(
         "//sw/device/lib/base:stdasm",
         "//sw/device/lib/crt",
         "//sw/device/lib/runtime:hart",
+        "//sw/device/lib/runtime:log",
         "//sw/device/lib/crypto/drivers:entropy",
         "//sw/device/silicon_creator/lib:boot_log",
         "//sw/device/silicon_creator/lib:build_info",

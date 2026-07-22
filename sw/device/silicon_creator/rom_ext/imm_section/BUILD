@@ -49,6 +49,7 @@ cc_library(
         "//sw/device/lib/base:macros",
         "//sw/device/lib/coverage:api",
         "//sw/device/lib/coverage:uart_runtime",
+        "//sw/device/lib/runtime:log",
         "//sw/device/silicon_creator/lib:epmp_state",
         "//sw/device/silicon_creator/lib:error",
         "//sw/device/silicon_creator/lib:manifest",
