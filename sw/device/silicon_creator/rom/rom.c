@@ -15,6 +15,7 @@
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/base/stdasm.h"
+#include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/base/static_critical_version.h"
@@ -27,6 +28,7 @@
 #include "sw/device/silicon_creator/lib/drivers/ast.h"
 #include "sw/device/silicon_creator/lib/drivers/hmac.h"
 #include "sw/device/silicon_creator/lib/drivers/ibex.h"
+#include "sw/device/silicon_creator/lib/drivers/kmac.h"
 #include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/drivers/lifecycle.h"
 #include "sw/device/silicon_creator/lib/drivers/otp.h"
@@ -601,10 +603,11 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   SEC_MMIO_WRITE_INCREMENT(kFlashCtrlSecMmioInfoCfgLock);
   */
 
-  // TODO(rroth): Introduce flag to avoid bricking the keymgr_dpe if the entropy
-  // source doesn't work
-  // Prepare the kmac / keymgr_dpe and load the UDS
-  if(true == true){
+  // Keymgr_dpe must be in the reset state
+  HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateReset));
+
+  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey generation in the ROM section.
+  if(true){
 
     // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
     // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
@@ -629,7 +632,10 @@ static rom_error_t rom_boot(const manifest_t *manifest,
 
         // Advance the keymgr dpe into the Available state and load the UDS in the
         // selected DPE slot.
-        RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+        HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+
+        // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot stage set to
+        // BootStageCreator (0). (Note: Current bootstage + 1)
         break;
       default:
         // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
@@ -637,11 +643,12 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         break;
     }
   } else {
-    // TODO(rroth): Do we need to load the UDS here too? Just ensure that the sw binding
-    // register are not cleared! Otherwise it could lock the full chip
-    // TODO(rroth): Bypass the CREATOR_ROOT_KEY generation according to issue ...
+    // TODO(#30666): Verify this issue doesn't lock the keymgr_dpe!
+    // Bypass the CREATOR_ROOT_KEY generation in ROM according to issue #564
     // Store the SW binding value for the attestation key
     sc_keymgr_dpe_sw_binding_set(&attestation_measurement);
+    // Set the max key version
+    sc_keymgr_dpe_max_ver_set(manifest->max_key_version);
   }
 
   // Verify the values written by the sec_mmio... framework
@@ -661,12 +668,18 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       case kLcStateProdEnd:
       case kLcStateRma:
 
+        // Verify the available state
+        HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateAvailable));
+
         // Prepare the data to derive the sealing CreatorRootKey.
+        keymgr_dpe_binding_value_t seal_binding_value;
+        memcpy(&seal_binding_value, &manifest->binding_value,
+               sizeof(keymgr_dpe_binding_value_t));
         sc_keymgr_dpe_advance_data_t adv_sealing_data;
         adv_sealing_data.sel_src_slot = kKeymgrDPESealSlot;
         adv_sealing_data.sel_dst_slot = kKeymgrDPESealSlot;
         adv_sealing_data.policy = kKeymgrDPEDefaultPolicy;
-        adv_sealing_data.binding_value = manifest->binding_value;
+        adv_sealing_data.binding_value = &seal_binding_value;
         adv_sealing_data.version = manifest->max_key_version;
 
         // Prepare the data to derive the attestation CreatorRootKey.
@@ -686,6 +699,9 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                                       kScKeymgrDPESecMmioSlotPolicy));
         HARDENED_RETURN_IF_ERROR(
             sc_keymgr_dpe_advance_creator(adv_sealing_data, adv_attestation_data));
+
+        // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot hold keys
+        // with boot stage set to BootStageOwnerInt (1). (Note: Current bootstage + 1)
 
         break;
       default:

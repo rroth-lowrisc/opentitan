@@ -346,6 +346,10 @@ rom_error_t dice_chain_attestation_creator(
   HARDENED_RETURN_IF_ERROR(
       sc_keymgr_dpe_advance_creator(adv_sealing_data, adv_attestation_data));
 
+  return kErrorOk;
+}
+
+rom_error_t dice_chain_attestation_creator_keygen(void) {
   // Generate an ECC P256 keypair
   HARDENED_RETURN_IF_ERROR(otbn_boot_cert_ecc_p256_keygen(
       kDiceKeyUds, &static_dice_cdi_0.uds_pubkey_id,
@@ -476,6 +480,17 @@ static rom_error_t dice_chain_seal_page_check(nvm_info_page_t info_page) {
              sizeof(hmac_digest_t)) != 0) {
     return kErrorDicePageCorrupted;
   }
+
+  return kErrorOk;
+}
+
+rom_error_t dice_chain_immutable_section_check(void) {
+  if (dice_chain_seal_page_check(kNvmInfoPageFactoryCerts) != kErrorOk) {
+    dbg_puts("warning: corrupted FactoryCerts page\r\n");
+  }
+
+  // Handles the certificates from the rom
+  RETURN_IF_ERROR(dice_chain_attestation_check_uds());
 
   return kErrorOk;
 }
