@@ -9,10 +9,10 @@
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/coverage/api.h"
 #include "sw/device/lib/runtime/log.h"
-#include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/cert/dice_chain.h"
+#include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/drivers/rnd.h"
 #include "sw/device/silicon_creator/lib/epmp_state.h"
 #include "sw/device/silicon_creator/lib/error.h"
@@ -35,7 +35,6 @@ const sc_keymgr_dpe_policies_t kKeymgrDPEDefaultPolicy = {
     .expo = kScKeymgrDPESlotPolNoExport,
     .parent = kScKeymgrDPESlotPolEraseParent,
 };
-
 
 OT_WARN_UNUSED_RESULT
 static rom_error_t imm_section_start(void) {
@@ -63,11 +62,12 @@ static rom_error_t imm_section_start(void) {
   nvm_ctrl_cert_info_page_owner_restrict(kNvmInfoPageAttestationKeySeeds);
   nvm_ctrl_info_cfg_lock(kNvmInfoPageAttestationKeySeeds);
 
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey generation in the ROM section.
-  if(true){
-
-    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
-    // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
+  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
+  // generation in the ROM section.
+  if (true) {
+    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The
+    // reason is the lcmgr enables the keymgr_dpe only in the Dev, Prod,
+    // ProdEnd, Rma tests
     switch (launder32(lifecycle_state_get())) {
       case kLcStateDev:
       case kLcStateProd:
@@ -75,7 +75,8 @@ static rom_error_t imm_section_start(void) {
       case kLcStateRma:
         // Generate the certificate related to UDS
         HARDENED_RETURN_IF_ERROR(dice_chain_attestation_creator_keygen());
-        LOG_INFO("imm_section_start: dice_chain_attestation_creator_keygen done");
+        LOG_INFO(
+            "imm_section_start: dice_chain_attestation_creator_keygen done");
 
         // Sideload sealing key to KMAC hw keyslot.
         HARDENED_RETURN_IF_ERROR(ownership_seal_init());
@@ -83,29 +84,34 @@ static rom_error_t imm_section_start(void) {
 
         dice_chain_init();
         dice_chain_immutable_section_check();
-        LOG_INFO("imm_section_start: dice_chain_init / immutable_section_check done");
+        LOG_INFO(
+            "imm_section_start: dice_chain_init / immutable_section_check "
+            "done");
 
         // The keymgr_dpe has loaded the attestation and sealing CreatorRootKey
         // inside the designated slots
-        HARDENED_RETURN_IF_ERROR(
-            dice_chain_attestation_owner_int(&boot_measurements.rom_ext, rom_ext));
+        HARDENED_RETURN_IF_ERROR(dice_chain_attestation_owner_int(
+            &boot_measurements.rom_ext, rom_ext));
         LOG_INFO("imm_section_start: dice_chain_attestation_owner_int done");
 
-        // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot hold keys
-        // with boot stage set to BootStageOwner (2). (Note: Current bootstage + 1)
+        // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
+        // hold keys with boot stage set to BootStageOwner (2). (Note: Current
+        // bootstage + 1)
         break;
       default:
-        // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
-        // Problematic as otherwise the ROM could be bricked!
+        // TODO(rroth): What should we do in the case where the keymgr_dpe is
+        // not enabled? Problematic as otherwise the ROM could be bricked!
         break;
     }
   } else {
-    // TODO(#30811): Fallback solution: Only generate the attestation CreatorRootKey here
+    // TODO(#30811): Fallback solution: Only generate the attestation
+    // CreatorRootKey here
     // 1. Start the entropy complex
     // 2. load the UDS
     // 3. Generate the attestation Creator Root Key
     // 4. Generate the attestation Owner Int Key
-    // 5. Generate the sealing Owner Int Key (Base: either att. Creator Root Key or UDS)
+    // 5. Generate the sealing Owner Int Key (Base: either att. Creator Root Key
+    // or UDS)
   }
 
   // Make mutable part executable.

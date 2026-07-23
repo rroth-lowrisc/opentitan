@@ -29,8 +29,8 @@
 #include "sw/device/silicon_creator/lib/drivers/ast.h"
 #include "sw/device/silicon_creator/lib/drivers/hmac.h"
 #include "sw/device/silicon_creator/lib/drivers/ibex.h"
-#include "sw/device/silicon_creator/lib/drivers/kmac.h"
 #include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
+#include "sw/device/silicon_creator/lib/drivers/kmac.h"
 #include "sw/device/silicon_creator/lib/drivers/lifecycle.h"
 #include "sw/device/silicon_creator/lib/drivers/otp.h"
 #include "sw/device/silicon_creator/lib/drivers/pinmux.h"
@@ -609,11 +609,12 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateReset));
   LOG_INFO("rom_boot: keymgr_dpe reset state check ok");
 
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey generation in the ROM section.
-  if(true){
-
-    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
-    // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
+  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
+  // generation in the ROM section.
+  if (true) {
+    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The
+    // reason is the lcmgr enables the keymgr_dpe only in the Dev, Prod,
+    // ProdEnd, Rma tests
     switch (launder32(lifecycle_state_get())) {
       case kLcStateDev:
       case kLcStateProd:
@@ -621,8 +622,9 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       case kLcStateRma:
 
         // Initialize the entropy complex and KMAC for key manager operations.
-        // Note: `OTCRYPTO_OK.value` is equal to `kErrorOk` but we cannot add a static
-        // assertion here since its definition is not an integer constant expression.
+        // Note: `OTCRYPTO_OK.value` is equal to `kErrorOk` but we cannot add a
+        // static assertion here since its definition is not an integer constant
+        // expression.
         HARDENED_RETURN_IF_ERROR(
             (rom_error_t)entropy_complex_init(kHardenedBoolFalse).value);
         HARDENED_RETURN_IF_ERROR(kmac_keymgr_configure());
@@ -630,20 +632,22 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         // Set keymgr reseed interval. Start with the maximum value to avoid
         // entropy complex contention during the boot process.
         const uint16_t kScKeymgrDPEEntropyReseedInterval = UINT16_MAX;
-        sc_keymgr_dpe_entropy_reseed_interval_set(kScKeymgrDPEEntropyReseedInterval);
+        sc_keymgr_dpe_entropy_reseed_interval_set(
+            kScKeymgrDPEEntropyReseedInterval);
         SEC_MMIO_WRITE_INCREMENT(kScKeymgrDPESecMmioReseedIntervalSet);
 
-        // Advance the keymgr dpe into the Available state and load the UDS in the
-        // selected DPE slot.
-        HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+        // Advance the keymgr dpe into the Available state and load the UDS in
+        // the selected DPE slot.
+        HARDENED_RETURN_IF_ERROR(
+            sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
         LOG_INFO("rom_boot: keymgr_dpe advance_initial done");
 
-        // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot stage set to
-        // BootStageCreator (0). (Note: Current bootstage + 1)
+        // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot
+        // stage set to BootStageCreator (0). (Note: Current bootstage + 1)
         break;
       default:
-        // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
-        // Problematic as otherwise the ROM could be bricked!
+        // TODO(rroth): What should we do in the case where the keymgr_dpe is
+        // not enabled? Problematic as otherwise the ROM could be bricked!
         break;
     }
   } else {
@@ -662,10 +666,10 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   // TODO(rroth): Introduce flag to avoid bricking the keymgr_dpe if the entropy
   // source doesn't work
   // Derive the CreatorRootKeys
-  if(true == true){
-
-    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The reason
-    // is the lcmgr enables the keymgr_dpe only in the Dev, Prod, ProdEnd, Rma tests
+  if (true == true) {
+    // TODO(rroth): The keymgr_dpe can not be started in all lc states! The
+    // reason is the lcmgr enables the keymgr_dpe only in the Dev, Prod,
+    // ProdEnd, Rma tests
     switch (launder32(lifecycle_state_get())) {
       case kLcStateDev:
       case kLcStateProd:
@@ -673,7 +677,8 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       case kLcStateRma:
 
         // Verify the available state
-        HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateAvailable));
+        HARDENED_RETURN_IF_ERROR(
+            sc_keymgr_dpe_state_check(kScKeymgrDPEStateAvailable));
 
         // Prepare the data to derive the sealing CreatorRootKey.
         keymgr_dpe_binding_value_t seal_binding_value;
@@ -701,17 +706,18 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSwBindingSet +
                                       kScKeymgrDPESecMmioMaxVerSet +
                                       kScKeymgrDPESecMmioSlotPolicy));
-        HARDENED_RETURN_IF_ERROR(
-            sc_keymgr_dpe_advance_creator(adv_sealing_data, adv_attestation_data));
+        HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_creator(
+            adv_sealing_data, adv_attestation_data));
         LOG_INFO("rom_boot: keymgr_dpe advance_creator done");
 
-        // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot hold keys
-        // with boot stage set to BootStageOwnerInt (1). (Note: Current bootstage + 1)
+        // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
+        // hold keys with boot stage set to BootStageOwnerInt (1). (Note:
+        // Current bootstage + 1)
 
         break;
       default:
-        // TODO(rroth): What should we do in the case where the keymgr_dpe is not enabled?
-        // Problematic as otherwise the ROM could be bricked!
+        // TODO(rroth): What should we do in the case where the keymgr_dpe is
+        // not enabled? Problematic as otherwise the ROM could be bricked!
         break;
     }
   }
