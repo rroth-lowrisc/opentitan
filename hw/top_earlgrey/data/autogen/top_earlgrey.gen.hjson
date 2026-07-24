@@ -548,6 +548,7 @@
   num_cores: "1"
   default_plic: rv_plic
   default_alert_handler: alert_handler
+  keymgr_dpe_seed_selector: flash_ctrl
   addr_spaces:
   [
     {
@@ -1927,8 +1928,6 @@
           width: 1
           default: "'0"
           inst_name: otp_ctrl
-          end_idx: -1
-          top_type: broadcast
           top_signame: otp_ctrl_keymgr_creator_seed
           index: -1
         }
@@ -1942,8 +1941,6 @@
           width: 1
           default: "'0"
           inst_name: otp_ctrl
-          end_idx: -1
-          top_type: broadcast
           top_signame: otp_ctrl_keymgr_owner_seed
           index: -1
         }
@@ -6344,6 +6341,8 @@
           act: req
           width: 1
           inst_name: flash_ctrl
+          default: ""
+          top_signame: flash_ctrl_keymgr
           index: -1
         }
         {
@@ -7914,8 +7913,7 @@
           width: 1
           inst_name: keymgr_dpe
           default: ""
-          domain: Main
-          top_signame: otp_ctrl_keymgr_creator_seed
+          top_signame: keymgr_dpe_creator_seed
           index: -1
         }
         {
@@ -7927,8 +7925,7 @@
           width: 1
           inst_name: keymgr_dpe
           default: ""
-          domain: Main
-          top_signame: otp_ctrl_keymgr_owner_seed
+          top_signame: keymgr_dpe_owner_seed
           index: -1
         }
         {
@@ -10076,14 +10073,6 @@
       [
         keymgr_dpe.creator_root_key
       ]
-      otp_ctrl.keymgr_creator_seed:
-      [
-        keymgr_dpe.creator_seed
-      ]
-      otp_ctrl.keymgr_owner_seed:
-      [
-        keymgr_dpe.owner_seed
-      ]
       keymgr_dpe.aes_key:
       [
         aes.keymgr_key
@@ -10507,6 +10496,11 @@
       keymgr_dpe.device_id
       sram_ctrl_main.otp_en_sram_ifetch
       rv_dm.otp_dis_rv_dm_late_debug
+      otp_ctrl.keymgr_creator_seed
+      otp_ctrl.keymgr_owner_seed
+      flash_ctrl.keymgr
+      keymgr_dpe.creator_seed
+      keymgr_dpe.owner_seed
     ]
     external:
     {
@@ -20963,8 +20957,6 @@
         width: 1
         default: "'0"
         inst_name: otp_ctrl
-        end_idx: -1
-        top_type: broadcast
         top_signame: otp_ctrl_keymgr_creator_seed
         index: -1
       }
@@ -20978,8 +20970,6 @@
         width: 1
         default: "'0"
         inst_name: otp_ctrl
-        end_idx: -1
-        top_type: broadcast
         top_signame: otp_ctrl_keymgr_owner_seed
         index: -1
       }
@@ -24027,6 +24017,8 @@
         act: req
         width: 1
         inst_name: flash_ctrl
+        default: ""
+        top_signame: flash_ctrl_keymgr
         index: -1
       }
       {
@@ -24952,8 +24944,7 @@
         width: 1
         inst_name: keymgr_dpe
         default: ""
-        domain: Main
-        top_signame: otp_ctrl_keymgr_creator_seed
+        top_signame: keymgr_dpe_creator_seed
         index: -1
       }
       {
@@ -24965,8 +24956,7 @@
         width: 1
         inst_name: keymgr_dpe
         default: ""
-        domain: Main
-        top_signame: otp_ctrl_keymgr_owner_seed
+        top_signame: keymgr_dpe_owner_seed
         index: -1
       }
       {
@@ -31722,30 +31712,6 @@
         default: "'0"
       }
       {
-        package: keymgr_dpe_pkg
-        struct: keymgr_dpe_creator_seed
-        domain: Main
-        signame: otp_ctrl_keymgr_creator_seed
-        width: 1
-        type: uni
-        end_idx: -1
-        act: req
-        suffix: ""
-        default: "'0"
-      }
-      {
-        package: keymgr_dpe_pkg
-        struct: keymgr_dpe_owner_seed
-        domain: Main
-        signame: otp_ctrl_keymgr_owner_seed
-        width: 1
-        type: uni
-        end_idx: -1
-        act: req
-        suffix: ""
-        default: "'0"
-      }
-      {
         package: keymgr_pkg
         struct: hw_key_req
         domain: Main
@@ -33448,6 +33414,56 @@
         type: uni
         end_idx: -1
         default: prim_mubi_pkg::MuBi8False
+      }
+      {
+        package: keymgr_dpe_pkg
+        struct: keymgr_dpe_creator_seed
+        signame: otp_ctrl_keymgr_creator_seed
+        domain: Main
+        width: 1
+        type: uni
+        end_idx: -1
+        default: "'0"
+      }
+      {
+        package: keymgr_dpe_pkg
+        struct: keymgr_dpe_owner_seed
+        signame: otp_ctrl_keymgr_owner_seed
+        domain: Main
+        width: 1
+        type: uni
+        end_idx: -1
+        default: "'0"
+      }
+      {
+        package: flash_ctrl_pkg
+        struct: keymgr_flash
+        signame: flash_ctrl_keymgr
+        domain: Main
+        width: 1
+        type: uni
+        end_idx: -1
+        default: ""
+      }
+      {
+        package: keymgr_dpe_pkg
+        struct: keymgr_dpe_creator_seed
+        signame: keymgr_dpe_creator_seed
+        domain: Main
+        width: 1
+        type: uni
+        end_idx: -1
+        default: ""
+      }
+      {
+        package: keymgr_dpe_pkg
+        struct: keymgr_dpe_owner_seed
+        signame: keymgr_dpe_owner_seed
+        domain: Main
+        width: 1
+        type: uni
+        end_idx: -1
+        default: ""
       }
     ]
   }
