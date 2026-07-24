@@ -625,9 +625,13 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         // Note: `OTCRYPTO_OK.value` is equal to `kErrorOk` but we cannot add a
         // static assertion here since its definition is not an integer constant
         // expression.
+        // TODO(rroth): Temporary bisecting logs, remove once the hang in
+        // rom_e2e_keymgr_dpe_init is root-caused.
         HARDENED_RETURN_IF_ERROR(
             (rom_error_t)entropy_complex_init(kHardenedBoolFalse).value);
+        LOG_INFO("rom_boot: entropy_complex_init done");
         HARDENED_RETURN_IF_ERROR(kmac_keymgr_configure());
+        LOG_INFO("rom_boot: kmac_keymgr_configure done");
 
         // Set keymgr reseed interval. Start with the maximum value to avoid
         // entropy complex contention during the boot process.
@@ -635,6 +639,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
         sc_keymgr_dpe_entropy_reseed_interval_set(
             kScKeymgrDPEEntropyReseedInterval);
         SEC_MMIO_WRITE_INCREMENT(kScKeymgrDPESecMmioReseedIntervalSet);
+        LOG_INFO("rom_boot: keymgr_dpe reseed interval set");
 
         // Advance the keymgr dpe into the Available state and load the UDS in
         // the selected DPE slot.
