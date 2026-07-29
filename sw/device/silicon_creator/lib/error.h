@@ -107,6 +107,7 @@ enum module_ {
   X(kErrorSigverifySpxNotFound,       ERROR_(12, kModuleSigverify, kNotFound)), \
   \
   X(kErrorKeymgrInternal,             ERROR_(1, kModuleKeymgr, kInternal)), \
+  X(kErrorKeymgrDpeTimeout,           ERROR_(2, kModuleKeymgr, kInternal)), \
   \
   X(kErrorManifestBadEntryPoint,      ERROR_(1, kModuleManifest, kInternal)), \
   X(kErrorManifestBadCodeRegion,      ERROR_(2, kModuleManifest, kInternal)), \

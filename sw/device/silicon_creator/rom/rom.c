@@ -16,6 +16,9 @@
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/base/stdasm.h"
+#include "sw/device/lib/dif/dif_otp_ctrl.h"
+#include "sw/device/lib/runtime/log.h"
+#include "sw/device/lib/runtime/print.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/base/static_critical_version.h"
@@ -204,6 +207,9 @@ static rom_error_t rom_init(void) {
 
   // Configure UART0 as stdout.
   uart_init(kUartNCOValue);
+  // TODO(rroth): Temporary debug instrumentation to bisect the hang seen in
+  // rom_e2e_keymgr_dpe_init. Remove once the underlying issue is root-caused.
+  base_set_stdout((buffer_sink_t){.data = NULL, .sink = uart_sink});
 
   // Set static_critical region format version.
   static_critical_version = kStaticCriticalVersion2;
@@ -612,11 +618,21 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                             uintptr_t imm_section_entry_point,
                             uint32_t nvm_exec) {
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomBoot, 1);
+  LOG_INFO("rom_boot: start");
 
   boot_log_t *boot_log = &retention_sram_get()->creator.boot_log;
   boot_log->rom_ext_slot =
       manifest == boot_policy_manifest_a_get() ? kBootSlotA : kBootSlotB;
   boot_log_digest_update(boot_log);
+
+  dif_otp_ctrl_t otp;
+  dif_result_t result;
+  result = dif_otp_ctrl_init_from_dt(kDtOtpCtrl, &otp);
+  bool is_computed;
+  result = dif_otp_ctrl_is_digest_computed(&otp, kDifOtpCtrlPartitionSecret2,
+                                           &is_computed);
+  LOG_INFO("secret2 digest computed (locked): %d", is_computed);
+  LOG_INFO("status %d", result);
 
   // The attestation measurement is either the OTP measurement or the binding
   // value from the manifest, depending on the OTP_MEAS_EN OTP switch.
@@ -635,6 +651,8 @@ static rom_error_t rom_boot(const manifest_t *manifest,
 
   // Keymgr_dpe must be in the reset state
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateReset));
+  LOG_INFO("rom_boot: keymgr_dpe reset state check ok");
+  LOG_INFO("Current LC state is: %x", (uint32_t)lifecycle_state_get());
 
   // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
   // generation in the ROM section.
@@ -653,16 +671,19 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       // `rom_start.S` brings up EDN0 which provides randomness to the
       // keymgr_dpe. Configure here the kmac for keymgr operation.
       HARDENED_RETURN_IF_ERROR(kmac_keymgr_configure());
+      LOG_INFO("rom_boot: kmac_keymgr_configure done");
 
       // Set keymgr reseed interval. Start with the maximum value to avoid
       // entropy complex contention during the boot process.
       sc_keymgr_dpe_entropy_reseed_interval_set(UINT16_MAX);
       SEC_MMIO_WRITE_INCREMENT(kScKeymgrDPESecMmioReseedIntervalSet);
+      LOG_INFO("rom_boot: keymgr_dpe reseed interval set");
 
       // Advance the keymgr dpe into the Available state and load the UDS in
       // the selected DPE slot.
       HARDENED_RETURN_IF_ERROR(
           sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
+      LOG_INFO("rom_boot: keymgr_dpe advance_initial done");
 
       // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot
       // stage set to BootStageCreator (0). (Note: Current bootstage + 1)
@@ -732,6 +753,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
                                     kScKeymgrDPESecMmioSlotPolicy));
       HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_creator(
           adv_sealing_data, adv_attestation_data));
+      LOG_INFO("rom_boot: keymgr_dpe advance_creator done");
 
       // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
       // hold keys with boot stage set to BootStageOwnerInt (1). (Note:
@@ -747,6 +769,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   // Verify the values written by the sec_mmio... framework
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/5);
+  LOG_INFO("SEC MMIO counter passed");
 
   // Configure address translation, compute the epmp regions and the entry
   // point for the virtual address in case the address translation is enabled.
@@ -780,23 +803,29 @@ static rom_error_t rom_boot(const manifest_t *manifest,
     default:
       HARDENED_TRAP();
   }
+  LOG_INFO("BS passed");
 
   // Unlock execution of ROM_EXT executable code (text) sections.
   HARDENED_RETURN_IF_ERROR(epmp_state_check());
   rom_epmp_unlock_rom_ext_rx(text_region);
+  LOG_INFO("EPMP checked");
 
   CFI_FUNC_COUNTER_PREPCALL(rom_counters, kCfiRomBoot, 2, kCfiRomPreBootCheck);
   rom_pre_boot_check();
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomBoot, 4);
   CFI_FUNC_COUNTER_CHECK(rom_counters, kCfiRomPreBootCheck, 8);
+  LOG_INFO("Bla 1");
 
   // Enable execution of code from flash if signature is verified.
   nvm_ctrl_exec_set(nvm_exec);
   SEC_MMIO_WRITE_INCREMENT(kNvmCtrlSecMmioExecSet);
+  LOG_INFO("Bla 2");
 
   // one more "sec_mmio_check_counters" is run inside rom_pre_boot_check()!
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/8);
+
+  LOG_INFO("rom_boot: jumping to rom_ext");
 
   // Jump to ROM_EXT entry point.
   enum {

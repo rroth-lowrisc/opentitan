@@ -100,10 +100,20 @@ void sc_keymgr_dpe_start_operation(void) {
  * finished with "done_successfully", `kErrorKeymgrInternal` otherwise.
  */
 rom_error_t sc_keymgr_dpe_wait_until_done(void) {
+  // TODO(rroth): Temporary debug instrumentation to bisect the hang seen in
+  // rom_e2e_keymgr_dpe_init. Remove once the underlying issue is root-caused;
+  // this loop is otherwise expected to run unbounded like the other
+  // OP_STATUS polling loops in this file.
+  enum { kMaxPollIterations = 5000000 };
+  uint32_t iterations = 0;
+
   // Poll the OP_STATUS register until it is different than "WIP".
   uint32_t reg = 0;
   uint32_t status = 0;
   do {
+    if (++iterations > kMaxPollIterations) {
+      return kErrorKeymgrDpeTimeout;
+    }
     // Read OP_STATUS and then clear by writing back the value we read.
     reg =
         abs_mmio_read32(sc_keymgr_dpe_base() + KEYMGR_DPE_OP_STATUS_REG_OFFSET);

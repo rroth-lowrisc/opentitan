@@ -9,11 +9,14 @@
 #include "sw/device/lib/base/hardened.h"
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/coverage/api.h"
+#include "sw/device/lib/runtime/log.h"
+#include "sw/device/lib/runtime/print.h"
 #include "sw/device/silicon_creator/lib/base/boot_measurements.h"
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/cert/dice_chain.h"
 #include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
 #include "sw/device/silicon_creator/lib/drivers/rnd.h"
+#include "sw/device/silicon_creator/lib/drivers/uart.h"
 #include "sw/device/silicon_creator/lib/epmp_state.h"
 #include "sw/device/silicon_creator/lib/error.h"
 #include "sw/device/silicon_creator/lib/manifest.h"
@@ -59,6 +62,12 @@ static hardened_bool_t imm_section_secret2_locked(void) {
 
 OT_WARN_UNUSED_RESULT
 static rom_error_t imm_section_start(void) {
+  // TODO(rroth): Temporary debug instrumentation to bisect the hang seen in
+  // rom_e2e_keymgr_dpe_init. Remove once the underlying issue is root-caused.
+  // UART0 hardware config persists across the jump from ROM, but this image's
+  // own `base_stdout` global needs to be (re-)hooked to it.
+  base_set_stdout((buffer_sink_t){.data = NULL, .sink = uart_sink});
+  LOG_INFO("imm_section_start: start");
   // Check the ePMP state.
   HARDENED_RETURN_IF_ERROR(epmp_state_check());
   // Check sec_mmio expectations.
@@ -69,6 +78,7 @@ static rom_error_t imm_section_start(void) {
   // Initialize Immutable ROM EXT.
   sec_mmio_next_stage_init();
   HARDENED_RETURN_IF_ERROR(imm_section_epmp_reconfigure());
+  LOG_INFO("imm_section_start: epmp done");
 
   // Establish our identity.
   const manifest_t *rom_ext = rom_ext_manifest();
@@ -81,6 +91,7 @@ static rom_error_t imm_section_start(void) {
 
   // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
   // generation in the ROM section.
+  LOG_INFO("imm_section_start: keymgr_dpe");
   hardened_bool_t keymgr_dpe_enabled = imm_section_keymgr_dpe_enabled();
   hardened_bool_t secret2_locked = imm_section_secret2_locked();
   if (launder32(keymgr_dpe_enabled) == kHardenedBoolTrue) {
@@ -99,17 +110,23 @@ static rom_error_t imm_section_start(void) {
 
       // Generate the certificate related to UDS
       HARDENED_RETURN_IF_ERROR(dice_chain_attestation_creator_keygen());
+      LOG_INFO("imm_section_start: dice_chain_attestation_creator_keygen done");
 
       // Sideload sealing key to KMAC hw keyslot.
       HARDENED_RETURN_IF_ERROR(ownership_seal_init());
+      LOG_INFO("imm_section_start: ownership_seal_init done");
 
       HARDENED_RETURN_IF_ERROR(dice_chain_init());
       HARDENED_RETURN_IF_ERROR(dice_chain_immutable_section_check());
+      LOG_INFO(
+          "imm_section_start: dice_chain_init / immutable_section_check "
+          "done");
 
       // The keymgr_dpe has loaded the attestation and sealing CreatorRootKey
       // inside the designated slots
       HARDENED_RETURN_IF_ERROR(dice_chain_attestation_owner_int(
           &boot_measurements.rom_ext, rom_ext));
+      LOG_INFO("imm_section_start: dice_chain_attestation_owner_int done");
 
       // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
       // hold keys with boot stage set to BootStageOwner (2). (Note: Current
@@ -134,6 +151,7 @@ static rom_error_t imm_section_start(void) {
   // Make mutable part executable.
   HARDENED_RETURN_IF_ERROR(imm_section_epmp_mutable_rx(rom_ext));
 
+  LOG_INFO("imm_section_start: done");
   return kErrorOk;
 }
 
