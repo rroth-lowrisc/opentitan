@@ -101,19 +101,37 @@ static status_t read_attestation_seed_configured(uint32_t *attestation_data) {
   return OK_STATUS();
 }
 
-status_t dice_test(void) {
-  perso_tlv_cert_obj_t target_cert = {0};
+static status_t read_cert_public_key_configured(uint32_t *cert_pk,
+                                                bool *available) {
+  if (kDeviceType != kDeviceSilicon) {
+    // When not on silicon, the DICE certificate info page is neither
+    // configured by the ROM_EXT nor personalized, so a read of it would be
+    // rejected by flash_ctrl memory protection (or hit an ECC error on the
+    // unprogrammed page). Skip the certificate cross-check in that case.
+    LOG_INFO("Skipping CDI_1 certificate check: page is not personalized.");
+    *available = false;
+    return OK_STATUS();
+  }
 
+  perso_tlv_cert_obj_t target_cert = {0};
   TRY(get_stored_certificate("CDI_1", 5, kNvmInfoPageDiceCerts, &target_cert));
   LOG_INFO("Found CDI_1 cert. Size: %d bytes", target_cert.cert_body_size);
 
-  uint32_t cert_pk[512 / 32] = {0};
   TRY(extract_public_key_from_der(target_cert.cert_body_p,
                                   target_cert.cert_body_size, cert_pk));
 
   char cert_pk_hex[256];
-  hexstr_encode(cert_pk_hex, sizeof(cert_pk_hex), cert_pk, sizeof(cert_pk));
+  hexstr_encode(cert_pk_hex, sizeof(cert_pk_hex), cert_pk, 512 / 8);
   LOG_INFO("Cert public key: %s\r", cert_pk_hex);
+
+  *available = true;
+  return OK_STATUS();
+}
+
+status_t dice_test(void) {
+  uint32_t cert_pk[512 / 32] = {0};
+  bool cert_pk_available = false;
+  TRY(read_cert_public_key_configured(cert_pk, &cert_pk_available));
 
   char buf[256];
 
@@ -162,15 +180,17 @@ status_t dice_test(void) {
   LOG_INFO("OTBN keygen instruction count: 0x%08x",
            otbn_instruction_count_get());
 
-  // Compare the public key from what is given in the cert.
-  // Needs endianness transformations.
-  uint32_t pk_be[512 / 32];
-  memcpy(pk_be, pk, sizeof(pk_be));
-  uint8_t *pk_be_bytes = (uint8_t *)pk_be;
-  util_reverse_bytes(pk_be_bytes, 32);
-  util_reverse_bytes(pk_be_bytes + 32, 32);
+  if (cert_pk_available) {
+    // Compare the public key from what is given in the cert.
+    // Needs endianness transformations.
+    uint32_t pk_be[512 / 32];
+    memcpy(pk_be, pk, sizeof(pk_be));
+    uint8_t *pk_be_bytes = (uint8_t *)pk_be;
+    util_reverse_bytes(pk_be_bytes, 32);
+    util_reverse_bytes(pk_be_bytes + 32, 32);
 
-  CHECK_ARRAYS_EQ(cert_pk, pk_be, 512 / 32);
+    CHECK_ARRAYS_EQ(cert_pk, pk_be, 512 / 32);
+  }
 
   // Checking the synchronous call and whether the same public key is generated
   // the second time.
