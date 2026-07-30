@@ -1677,6 +1677,22 @@
       en_run_modes: ["sw_test_mode_test_rom"]
     }
     {
+      name: chip_sw_kmac_kmac_key_sideload
+      uvm_test_seq: chip_sw_base_vseq
+      sw_images: ["//sw/device/tests:kmac_kmac_key_sideload_test:1:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+sw_test_timeout_ns=20_000_000"]
+      run_timeout_mins: 90
+    }
+    {
+      name: chip_sw_kmac_error_conditions
+      uvm_test_seq: chip_sw_base_vseq
+      sw_images: ["//sw/device/tests:kmac_error_conditions_test:1:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+sw_test_timeout_ns=20_000_000"]
+      run_timeout_mins: 90
+    }
+    {
       name: chip_sw_rom_ctrl_integrity_check
       uvm_test_seq: chip_sw_rom_ctrl_integrity_check_vseq
       sw_images: ["//sw/device/tests/sim_dv:rom_ctrl_integrity_check_test:1:new_rules"]
