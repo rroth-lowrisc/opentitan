@@ -13,6 +13,9 @@ use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use zerocopy::IntoBytes;
 
+pub mod tee_console;
+pub use tee_console::TeeConsole;
+
 use bindgen::sram_program::SRAM_MAGIC_SP_EXECUTION_DONE;
 use cert_lib::{
     CaConfig, CaKey, EndorsedCert, parse_and_endorse_x509_cert, validate_cert_chain,
@@ -20,7 +23,6 @@ use cert_lib::{
 };
 use ft_ext_lib::{ft_inject_certs_ext, ft_post_boot_ext};
 use opentitanlib::app::{TransportWrapper, UartRx};
-use opentitanlib::console::spi::SpiConsoleDevice;
 use opentitanlib::io::console::ConsoleError;
 use opentitanlib::io::jtag::{JtagParams, JtagTap, RiscvGpr, RiscvReg};
 use opentitanlib::test_utils::init::InitializeTest;
@@ -86,7 +88,7 @@ pub fn run_sram_ft_individualize(
     jtag_params: &JtagParams,
     sram_program: &SramProgramParams,
     ft_individualize_data_in: &ManufFtIndividualizeData,
-    spi_console: &SpiConsoleDevice,
+    spi_console: &TeeConsole,
     timeout: Duration,
     ujson_payloads: &mut UjsonPayloads,
 ) -> Result<()> {
@@ -204,7 +206,7 @@ pub fn test_exit(
 fn send_rma_unlock_token_hash(
     rma_unlock_token: &ArrayVec<u32, 4>,
     timeout: Duration,
-    spi_console: &SpiConsoleDevice,
+    spi_console: &TeeConsole,
     ujson_payloads: &mut UjsonPayloads,
 ) -> Result<()> {
     let rma_token_hash = LcTokenHash {
@@ -334,7 +336,7 @@ fn provision_certificates(
     ca_keys: HashMap<String, CaKey>,
     perso_certgen_inputs: &ManufCertgenInputs,
     timeout: Duration,
-    spi_console: &SpiConsoleDevice,
+    spi_console: &TeeConsole,
     ujson_payloads: &mut UjsonPayloads,
     response: &mut PersonalizeResponse,
 ) -> Result<()> {
@@ -621,7 +623,7 @@ pub fn run_ft_personalize(
     ca_keys: HashMap<String, CaKey>,
     perso_certgen_inputs: &ManufCertgenInputs,
     second_bootstrap: PathBuf,
-    spi_console: &SpiConsoleDevice,
+    spi_console: &TeeConsole,
     ujson_payloads: &mut UjsonPayloads,
     timeout: Duration,
     response: &mut PersonalizeResponse,

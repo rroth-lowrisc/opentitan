@@ -12,6 +12,7 @@ package(default_visibility = ["//visibility:public"])
         name = "ft_lib_{}".format(sku),
         srcs = [
             "src/lib.rs",
+            "src/tee_console.rs",
         ],
         crate_name = "ft_lib",
         deps = [

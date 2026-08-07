@@ -16,6 +16,11 @@ configure_make(
     autoreconf = True,
     autoreconf_options = ["-fi"],
     configure_in_place = True,
+    # sc-hsm-embedded declares local variables named `true`/`false`, which are
+    # keywords in C23, and GCC >= 15 defaults to `-std=gnu23`. The `--conlyopt`
+    # in .bazelrc does not reach this target because it is built in the exec
+    # configuration, so pin the C standard here.
+    copts = ["-std=gnu11"],
     lib_source = ":all_srcs",
     out_shared_libs = ["libsc-hsm-pkcs11.so"],
 )

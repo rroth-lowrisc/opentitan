@@ -17,7 +17,8 @@ use p256::NistP256;
 
 use cert_lib::{CaConfig, CaKey, CaKeyType};
 use ft_lib::{
-    check_slot_b_boot_up, run_ft_personalize, run_sram_ft_individualize, test_exit, test_unlock,
+    TeeConsole, check_slot_b_boot_up, run_ft_personalize, run_sram_ft_individualize, test_exit,
+    test_unlock,
 };
 use opentitanlib::backend;
 use opentitanlib::console::spi::SpiConsoleDevice;
@@ -150,11 +151,14 @@ fn main() -> Result<()> {
     let device_console_tx_ready_pin = &transport.gpio_pin(&opts.console_tx_indicator_pin)?;
     device_console_tx_ready_pin.set_mode(PinMode::Input)?;
     device_console_tx_ready_pin.set_pull_mode(PullMode::None)?;
-    let spi_console = SpiConsoleDevice::new(
+    let spi_device = SpiConsoleDevice::new(
         &*spi,
         Some(device_console_tx_ready_pin),
         /*ignore_frame_num=*/ false,
     )?;
+    // The ROM and ROM_EXT print over UART0 rather than the SPI console, so tee
+    // the two together to make their output visible in this flow's log.
+    let spi_console = TeeConsole::new(&spi_device, transport.uart("console")?);
     InitializeTest::print_result(
         "load_bitstream",
         opts.init
