@@ -156,7 +156,7 @@ module keymgr_dpe
   // SEC_CM: BUS.INTEGRITY
   // SEC_CM: CONFIG.SHADOW
   // SEC_CM: OP.CONFIG.REGWEN, RESEED.CONFIG.REGWEN, SW_BINDING.CONFIG.REGWEN
-  // SEC_CM: MAX_KEY_VER.CONFIG.REGWEN
+  // SEC_CM: MAX_KEY_VER.CONFIG.REGWEN, SLOT_POLICY.CONFIG.REGWEN
   keymgr_dpe_reg_top u_reg (
     .clk_i,
     .rst_ni,
@@ -366,6 +366,7 @@ module keymgr_dpe
       NumMaxHwSlotWidth-1:NumInstHwSlotWidth];
   end
 
+  // SEC_CM: INTERNAL.KEY.SW_NOACCESS
   keymgr_dpe_ctrl # (
     .NumInstHwSlot(NumInstHwSlot),
     .NumInstHwSlotWidth(NumInstHwSlotWidth),
