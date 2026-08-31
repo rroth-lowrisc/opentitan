@@ -31,6 +31,11 @@ interface keymgr_dpe_if(input clk, input rst_n);
   keymgr_pkg::hw_key_req_t aes_key_exp;
   keymgr_pkg::otbn_key_req_t otbn_key_exp;
 
+  // `kmac_key_exp` above is dual-purpose: `update_kdf_key()` also overwrites it on every
+  // advance/generate operation (valid or not) to track the value that should transiently appear
+  // on `kmac_key_o` while a KDF is in flight.
+  keymgr_pkg::hw_key_req_t kmac_sideload_key_exp;
+
   // connect KDF interface for assertion check
   wire kmac_pkg::app_req_t kmac_data_req;
   wire kmac_pkg::app_rsp_t kmac_data_rsp;
@@ -142,6 +147,7 @@ interface keymgr_dpe_if(input clk, input rst_n);
   function automatic void reset();
     keymgr_dpe_en = lc_ctrl_pkg::lc_tx_t'($urandom);
     kmac_key_exp = '0;
+    kmac_sideload_key_exp = '0;
     aes_key_exp  = '0;
     otbn_key_exp = '0;
     is_kmac_key_good = 0;
@@ -288,6 +294,7 @@ interface keymgr_dpe_if(input clk, input rst_n);
         if (kmac_sideload_status != SideLoadClear) begin
           kmac_sideload_status     <= SideLoadAvail;
           kmac_key_exp             <= '{1'b1, trun_key_shares};
+          kmac_sideload_key_exp    <= '{1'b1, trun_key_shares};
           is_kmac_key_good         <= 1;
           kmac_sideload_key_shares <= trun_key_shares;
         end
@@ -339,6 +346,7 @@ interface keymgr_dpe_if(input clk, input rst_n);
       keymgr_pkg::SideLoadClrKmac: begin
         is_kmac_key_good <= 0;
         kmac_key_exp.valid <= 0;
+        kmac_sideload_key_exp.valid <= 0;
         kmac_sideload_status <= SideLoadClear;
       end
       keymgr_pkg::SideLoadClrOtbn: begin
@@ -360,6 +368,7 @@ interface keymgr_dpe_if(input clk, input rst_n);
 
     aes_key_exp.valid  <= 0;
     kmac_key_exp.valid <= 0;
+    kmac_sideload_key_exp.valid <= 0;
     otbn_key_exp.valid <= 0;
 
     aes_sideload_status  <= SideLoadClear;

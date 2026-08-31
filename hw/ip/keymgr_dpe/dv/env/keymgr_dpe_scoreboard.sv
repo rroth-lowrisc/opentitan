@@ -654,11 +654,11 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
                   cfg.keymgr_dpe_vif.otbn_key_exp, cfg.keymgr_dpe_vif.otbn_key))
             end
 
-            if (cfg.keymgr_dpe_vif.kmac_key_exp != cfg.keymgr_dpe_vif.kmac_key) begin
+            if (cfg.keymgr_dpe_vif.kmac_sideload_key_exp != cfg.keymgr_dpe_vif.kmac_key) begin
                 `uvm_error(`gfn,
-                  $sformatf({"After a disable kmac sideload key was not preseved",
+                  $sformatf({"After a disable kmac sideload key was not preserved ",
                   "exp 'h%0h vs. act 'h%0h"},
-                  cfg.keymgr_dpe_vif.kmac_key_exp, cfg.keymgr_dpe_vif.kmac_key))
+                  cfg.keymgr_dpe_vif.kmac_sideload_key_exp, cfg.keymgr_dpe_vif.kmac_key))
             end
             post_disable_compare_key_slots = 0;
           end
