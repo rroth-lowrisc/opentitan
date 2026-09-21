@@ -249,6 +249,110 @@ module keymgr_dpe_ctrl
   assign prng_en_o = random_req | wipe_req | prng_en_dis_inv_q[0];
 
   //////////////////////////
+  // ECC
+  //////////////////////////
+
+  typedef logic [6:0] metadata_ecc_t;
+
+  logic [56:0]                       metadata_sel_slot, unused_data_enc;
+  metadata_ecc_t                     metadata_sel_slot_ecc;
+  metadata_ecc_t [NumInstHwSlot-1:0] ecc_metadata_q, ecc_metadata_d;
+
+  // Encode the metadata from the selected slot
+  // The metadata itself are stripped from the output of the encoder
+  prim_secded_64_57_enc u_ecc_enc (
+    .data_i (metadata_sel_slot),
+    .data_o ({metadata_sel_slot_ecc, unused_data_enc})
+  );
+
+  //SEC_CM: CTRL.KEY.INTEGRITY
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      ecc_metadata_q <= '0;
+    end else begin
+      ecc_metadata_q <= ecc_metadata_d;
+    end
+  end
+
+  // Calculate the ECC if the slot is updated
+  always_comb begin
+    ecc_metadata_d = ecc_metadata_q;
+    metadata_sel_slot = '0;
+
+    unique case (update_sel)
+
+      SlotDestRandomize: begin
+        metadata_sel_slot = '0;
+        ecc_metadata_d = '0;
+      end
+
+      // `SlotLoadRoot` is used only once after reset, and it allows keymgr_DPE to store the root
+      // secret (UDS) that comes from peripheral OTP port.
+      SlotLoadRoot: begin
+        metadata_sel_slot = {}; // TODO: Maybe append metadata here! Use the same struct as with metadata read!!
+        // Store the encoding
+        ecc_metadata_d[slot_dst_sel_i] = metadata_sel_slot_ecc;
+
+        // TODO: remove this!
+        key_slots_d[slot_dst_sel_i].valid = 1;
+        key_slots_d[slot_dst_sel_i].boot_stage = BootStageCreator;
+        key_slots_d[slot_dst_sel_i].key[0] ^= root_key_i.key[0];
+        key_slots_d[slot_dst_sel_i].key[1] ^= root_key_i.key[1];
+        key_slots_d[slot_dst_sel_i].max_key_version = max_key_version_i;
+        key_slots_d[slot_dst_sel_i].key_policy = DEFAULT_UDS_POLICY;
+      end
+
+      // `SlotLoadFromKmac` is used at the end of a successful advance operation, so that the
+      // digest computed by KMAC is stored in the specified keymgr slot as the key value of DPE.
+      SlotLoadFromKmac: begin
+        metadata_sel_slot = {}; // TODO: Maybe append metadata here! Use the same struct as with metadata read!!
+        // Store the encoding
+        ecc_metadata_d[slot_dst_sel_i] = metadata_sel_slot_ecc;
+
+        // TODO: remove this!
+        key_slots_d[slot_dst_sel_i].valid = 1;
+        key_slots_d[slot_dst_sel_i].key = kmac_data_i;
+        key_slots_d[slot_dst_sel_i].max_key_version = max_key_version_i;
+        key_slots_d[slot_dst_sel_i].boot_stage = next_boot_stage;
+        key_slots_d[slot_dst_sel_i].key_policy = slot_policy_i;
+      end
+
+      // `SlotErase` is used for erasing the slot selected by destination slot CSR. Erasing is a
+      // regular SW invoked operation in keymgr_DPE, and it can serve two functions:
+      // 1) Remove DPE contexts that should not be accessible in the later program flow
+      // 2) Remove DPE contexts, so that the hardware keymgr slot can be used to derive another DPE
+      // context through advance call.
+      // This is different than `SlotWipeAll`, which removes all secrets inside keymgr_DPE when
+      // a fault is observed.
+      SlotErase: begin
+        key_slots_d[slot_dst_sel_i] = '0;
+        for (int j = 0; j < Shares; j++) begin
+          // Clear all shares with equal randomness for SCA resistance
+          key_slots_d[slot_dst_sel_i].key[j][cnt*EntropyWidth +: EntropyWidth] = entropy_i[0];
+        end
+      end
+
+      // `SlotWipeAll` and `SlotWipeInternalOnly` overwrite all internal key slots with random bits
+      // from the entropy interface. The former is used in a panic/terminal state; the latter is
+      // used during SW-initiated disablement. (`SlotWipeAll` additionally wipes keys in the
+      // sideload interfaces, but that is outside the scope of this mux.)
+      SlotWipeAll,
+      SlotWipeInternalOnly: begin
+        for (int i = 0; i < NumInstHwSlot; i++) begin
+          // Note that '0 for `key_policy` is a safe default, as it is the most restrictive policy
+          key_slots_d[i] = '0;
+          for (int j = 0; j < Shares; j++) begin
+            key_slots_d[i].key[j] = {EntropyRounds{entropy_i[j]}};
+          end
+        end
+      end
+
+      default:;
+    endcase // unique case (update_sel)
+  end
+
+
+  //////////////////////////
   // Main Control FSM
   //////////////////////////
 
@@ -276,8 +380,6 @@ module keymgr_dpe_ctrl
                           {EntropyRounds{entropy_i[i]}};
   end
 
-  // TODO(#384): Enable ECC so that we have key integrity
-  //SEC_CM: CTRL.KEY.INTEGRITY
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       // TODO(#384): Check writing '0 to policy bits is OK
