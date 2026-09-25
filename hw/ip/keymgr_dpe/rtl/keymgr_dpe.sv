@@ -327,6 +327,7 @@ module keymgr_dpe
   logic kdf_engine_mubi_err;
 
   // Verify mubi signal is correctly encoded
+  // SEC_CM: KDF_ENGINE.CTRL.MUBI
   assign kdf_engine_mubi_err = mubi4_test_invalid(prim_mubi_pkg::mubi4_t'(reg2hw.kdf_engine.q));
 
   for (genvar i = 0; i < Shares; i++) begin : gen_truncate_data
