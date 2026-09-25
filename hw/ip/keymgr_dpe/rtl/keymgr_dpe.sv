@@ -155,10 +155,6 @@ module keymgr_dpe
   );
   assign sensitive_key_o = prim_mubi_pkg::mubi4_t'(sensitive_key_buf);
 
-  // TODO: read unassigned parameter to avoid linter error
-  logic unused_parameter;
-  assign unused_parameter = SupportOtbnAsKdfEngine;
-
   /////////////////////////////////////
   // Anchor incoming seeds and constants
   /////////////////////////////////////
@@ -757,7 +753,9 @@ module keymgr_dpe
   //  Side load key storage
   /////////////////////////////////////
   // SEC_CM: HW.KEY.SW_NOACCESS
-  keymgr_dpe_sideload_key_ctrl u_sideload_ctrl (
+  keymgr_dpe_sideload_key_ctrl #(
+    .SupportOtbnAsKdfEngine(SupportOtbnAsKdfEngine)
+  ) u_sideload_ctrl (
     .clk_i,
     .rst_ni,
     .init_i(init),
@@ -766,6 +764,7 @@ module keymgr_dpe
     .wipe_key_i(wipe_key),
     .dest_sel_i(dest_sel),
     .hw_key_sel_i(hw_key_sel),
+    .otbn_as_kdf_engine_i(prim_mubi_pkg::MuBi4False),
     // SEC_CM: OUTPUT_KEYS.CTRL.REDUN
     .data_en_i(data_hw_en),
     .data_valid_i(data_valid),
