@@ -330,6 +330,7 @@ module keymgr_dpe_reg_top (
   logic fault_status_side_ctrl_fsm_qs;
   logic fault_status_side_ctrl_sel_qs;
   logic fault_status_key_ecc_qs;
+  logic fault_status_kdf_engine_dec_qs;
   logic debug_we;
   logic debug_invalid_creator_seed_qs;
   logic debug_invalid_creator_seed_wd;
@@ -2570,6 +2571,33 @@ module keymgr_dpe_reg_top (
     .qs     (fault_status_key_ecc_qs)
   );
 
+  //   F[kdf_engine_dec]: 14:14
+  prim_subreg #(
+    .DW      (1),
+    .SwAccess(prim_subreg_pkg::SwAccessRO),
+    .RESVAL  (1'h0),
+    .Mubi    (1'b0)
+  ) u_fault_status_kdf_engine_dec (
+    .clk_i   (clk_i),
+    .rst_ni  (rst_ni),
+
+    // from register interface
+    .we     (1'b0),
+    .wd     ('0),
+
+    // from internal hardware
+    .de     (hw2reg.fault_status.kdf_engine_dec.de),
+    .d      (hw2reg.fault_status.kdf_engine_dec.d),
+
+    // to internal hardware
+    .qe     (),
+    .q      (reg2hw.fault_status.kdf_engine_dec.q),
+    .ds     (),
+
+    // to register interface (read)
+    .qs     (fault_status_kdf_engine_dec_qs)
+  );
+
 
   // R[debug]: V(False)
   //   F[invalid_creator_seed]: 0:0
@@ -3470,6 +3498,7 @@ module keymgr_dpe_reg_top (
         reg_rdata_next[11] = fault_status_side_ctrl_fsm_qs;
         reg_rdata_next[12] = fault_status_side_ctrl_sel_qs;
         reg_rdata_next[13] = fault_status_key_ecc_qs;
+        reg_rdata_next[14] = fault_status_kdf_engine_dec_qs;
       end
 
       addr_hit[54]: begin

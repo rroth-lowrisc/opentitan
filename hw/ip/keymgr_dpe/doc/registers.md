@@ -676,31 +676,32 @@ invoked, while asynchronous refers to faults that can happen at any time.
 
 - Offset: `0xd4`
 - Reset default: `0x0`
-- Reset mask: `0x3fff`
+- Reset mask: `0x7fff`
 
 ### Fields
 
 ```wavejson
-{"reg": [{"name": "CMD", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_FSM", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_DONE", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_OP", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_OUT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "REGFILE_INTG", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SHADOW", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_INTG", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_CHK", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_CNT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "RESEED_CNT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SIDE_CTRL_FSM", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SIDE_CTRL_SEL", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KEY_ECC", "bits": 1, "attr": ["ro"], "rotate": -90}, {"bits": 18}], "config": {"lanes": 1, "fontsize": 10, "vspace": 150}}
+{"reg": [{"name": "CMD", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_FSM", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_DONE", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_OP", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KMAC_OUT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "REGFILE_INTG", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SHADOW", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_INTG", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_CHK", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "CTRL_FSM_CNT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "RESEED_CNT", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SIDE_CTRL_FSM", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "SIDE_CTRL_SEL", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KEY_ECC", "bits": 1, "attr": ["ro"], "rotate": -90}, {"name": "KDF_ENGINE_DEC", "bits": 1, "attr": ["ro"], "rotate": -90}, {"bits": 17}], "config": {"lanes": 1, "fontsize": 10, "vspace": 160}}
 ```
 
-|  Bits  |  Type  |  Reset  | Name          | Description                                                                               |
-|:------:|:------:|:-------:|:--------------|:------------------------------------------------------------------------------------------|
-| 31:14  |        |         |               | Reserved                                                                                  |
-|   13   |   ro   |   0x0   | KEY_ECC       | Secret key ecc error, asynchronous fault                                                  |
-|   12   |   ro   |   0x0   | SIDE_CTRL_SEL | Sideload control key select error, synchronous fault                                      |
-|   11   |   ro   |   0x0   | SIDE_CTRL_FSM | Sideload control FSM integrity error, asynchronous fault                                  |
-|   10   |   ro   |   0x0   | RESEED_CNT    | Reseed counter integrity error, asynchronous fault                                        |
-|   9    |   ro   |   0x0   | CTRL_FSM_CNT  | Control FSM counter integrity error, asynchronous fault                                   |
-|   8    |   ro   |   0x0   | CTRL_FSM_CHK  | Control FSM cross check error, asynchronous fault                                         |
-|   7    |   ro   |   0x0   | CTRL_FSM_INTG | Control FSM integrity error, asynchronous fault                                           |
-|   6    |   ro   |   0x0   | SHADOW        | Shadow copy storage error, asynchronous fault                                             |
-|   5    |   ro   |   0x0   | REGFILE_INTG  | Register file integrity error, asynchronous fault                                         |
-|   4    |   ro   |   0x0   | KMAC_OUT      | KMAC data returned as all 0's or all 1's - synchronous fault                              |
-|   3    |   ro   |   0x0   | KMAC_OP       | KMAC reported an error during keymgr usage, this should never happen - synchronous fault. |
-|   2    |   ro   |   0x0   | KMAC_DONE     | The kmac transfer interface encountered an unexpected done, asynchronous fault.           |
-|   1    |   ro   |   0x0   | KMAC_FSM      | The kmac transfer interface FSM is in an invalid state, asynchronous fault.               |
-|   0    |   ro   |   0x0   | CMD           | A non-onehot command was seen in kmac, asynchronous fault.                                |
+|  Bits  |  Type  |  Reset  | Name           | Description                                                                               |
+|:------:|:------:|:-------:|:---------------|:------------------------------------------------------------------------------------------|
+| 31:15  |        |         |                | Reserved                                                                                  |
+|   14   |   ro   |   0x0   | KDF_ENGINE_DEC | Kdf engine mubi signal decode error, asynchronous fault                                   |
+|   13   |   ro   |   0x0   | KEY_ECC        | Secret key ecc error, asynchronous fault                                                  |
+|   12   |   ro   |   0x0   | SIDE_CTRL_SEL  | Sideload control key select error, synchronous fault                                      |
+|   11   |   ro   |   0x0   | SIDE_CTRL_FSM  | Sideload control FSM integrity error, asynchronous fault                                  |
+|   10   |   ro   |   0x0   | RESEED_CNT     | Reseed counter integrity error, asynchronous fault                                        |
+|   9    |   ro   |   0x0   | CTRL_FSM_CNT   | Control FSM counter integrity error, asynchronous fault                                   |
+|   8    |   ro   |   0x0   | CTRL_FSM_CHK   | Control FSM cross check error, asynchronous fault                                         |
+|   7    |   ro   |   0x0   | CTRL_FSM_INTG  | Control FSM integrity error, asynchronous fault                                           |
+|   6    |   ro   |   0x0   | SHADOW         | Shadow copy storage error, asynchronous fault                                             |
+|   5    |   ro   |   0x0   | REGFILE_INTG   | Register file integrity error, asynchronous fault                                         |
+|   4    |   ro   |   0x0   | KMAC_OUT       | KMAC data returned as all 0's or all 1's - synchronous fault                              |
+|   3    |   ro   |   0x0   | KMAC_OP        | KMAC reported an error during keymgr usage, this should never happen - synchronous fault. |
+|   2    |   ro   |   0x0   | KMAC_DONE      | The kmac transfer interface encountered an unexpected done, asynchronous fault.           |
+|   1    |   ro   |   0x0   | KMAC_FSM       | The kmac transfer interface FSM is in an invalid state, asynchronous fault.               |
+|   0    |   ro   |   0x0   | CMD            | A non-onehot command was seen in kmac, asynchronous fault.                                |
 
 ## DEBUG
 The register holds some debug information that may be convenient if keymgr
