@@ -355,6 +355,7 @@ package keymgr_dpe_pkg;
     AsyncFaultRCntErr,
     AsyncFaultSideErr,
     AsyncFaultKeyEcc,
+    AsyncFaultKdfEngineDecErr,
     AsyncFaultLastIdx
   } keymgr_dpe_async_fault_e;
 
@@ -374,6 +375,7 @@ package keymgr_dpe_pkg;
     FaultSideFsm,
     FaultSideSel,
     FaultKeyEcc,
+    FaultKdfEngineDec,
     FaultLastPos
   } keymgr_dpe_fault_pos_e;
 

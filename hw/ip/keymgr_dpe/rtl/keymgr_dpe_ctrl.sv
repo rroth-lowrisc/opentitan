@@ -32,6 +32,7 @@ module keymgr_dpe_ctrl
   input reseed_cnt_err_i,
   input sideload_sel_err_i,
   input sideload_fsm_err_i,
+  input kdf_engine_mubi_err_i,
 
   // Software interface
   input op_start_i,
@@ -739,6 +740,7 @@ module keymgr_dpe_ctrl
     .cnt_err_i(cnt_err),
     .reseed_cnt_err_i,
     .sideload_fsm_err_i,
+    .kdf_engine_mubi_err_i,
 
     .op_update_i(op_update),
     .op_done_i(op_done_o),

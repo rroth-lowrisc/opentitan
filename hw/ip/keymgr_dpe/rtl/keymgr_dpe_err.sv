@@ -36,6 +36,7 @@ module keymgr_dpe_err
   input cnt_err_i,
   input reseed_cnt_err_i,
   input sideload_fsm_err_i,
+  input kdf_engine_mubi_err_i,
 
   input op_update_i,
   input op_done_i,
@@ -122,10 +123,11 @@ module keymgr_dpe_err
   assign async_fault_d[AsyncFaultKeyEcc]   = ecc_err_i;
 
   // SEC_CM: CTRL.FSM.CONSISTENCY
-  assign async_fault_d[AsyncFaultFsmChk]   = state_change_err_i | op_state_cmd_err_i;
-  assign async_fault_d[AsyncFaultCntErr ]  = cnt_err_i;
-  assign async_fault_d[AsyncFaultRCntErr]  = reseed_cnt_err_i;
-  assign async_fault_d[AsyncFaultSideErr]  = sideload_fsm_err_i;
+  assign async_fault_d[AsyncFaultFsmChk]          = state_change_err_i | op_state_cmd_err_i;
+  assign async_fault_d[AsyncFaultCntErr ]         = cnt_err_i;
+  assign async_fault_d[AsyncFaultRCntErr]         = reseed_cnt_err_i;
+  assign async_fault_d[AsyncFaultSideErr]         = sideload_fsm_err_i;
+  assign async_fault_d[AsyncFaultKdfEngineDecErr] = kdf_engine_mubi_err_i;
 
   // certain errors/faults can only happen when there's an actual kmac transaction,
   // others can happen with or without.
@@ -134,20 +136,21 @@ module keymgr_dpe_err
   assign error_o[ErrShadowUpdate] = async_err_o[AsyncErrShadowUpdate];
 
   // output to fault code register
-  assign fault_o[FaultKmacOp]     = op_done_i & sync_fault_o[SyncFaultKmacOp];
-  assign fault_o[FaultKmacOut]    = op_done_i & sync_fault_o[SyncFaultKmacOut];
-  assign fault_o[FaultSideSel]    = op_done_i & sync_fault_o[SyncFaultSideSel];
-  assign fault_o[FaultKmacCmd]    = async_fault_o[AsyncFaultKmacCmd];
-  assign fault_o[FaultKmacFsm]    = async_fault_o[AsyncFaultKmacFsm];
-  assign fault_o[FaultKmacDone]   = async_fault_o[AsyncFaultKmacDone];
-  assign fault_o[FaultRegIntg]    = async_fault_o[AsyncFaultRegIntg];
-  assign fault_o[FaultShadow]     = async_fault_o[AsyncFaultShadow];
-  assign fault_o[FaultCtrlFsm]    = async_fault_o[AsyncFaultFsmIntg];
-  assign fault_o[FaultCtrlFsmChk] = async_fault_o[AsyncFaultFsmChk];
-  assign fault_o[FaultCtrlCnt]    = async_fault_o[AsyncFaultCntErr];
-  assign fault_o[FaultReseedCnt]  = async_fault_o[AsyncFaultRCntErr];
-  assign fault_o[FaultSideFsm]    = async_fault_o[AsyncFaultSideErr];
-  assign fault_o[FaultKeyEcc]     = async_fault_o[AsyncFaultKeyEcc];
+  assign fault_o[FaultKmacOp]       = op_done_i & sync_fault_o[SyncFaultKmacOp];
+  assign fault_o[FaultKmacOut]      = op_done_i & sync_fault_o[SyncFaultKmacOut];
+  assign fault_o[FaultSideSel]      = op_done_i & sync_fault_o[SyncFaultSideSel];
+  assign fault_o[FaultKmacCmd]      = async_fault_o[AsyncFaultKmacCmd];
+  assign fault_o[FaultKmacFsm]      = async_fault_o[AsyncFaultKmacFsm];
+  assign fault_o[FaultKmacDone]     = async_fault_o[AsyncFaultKmacDone];
+  assign fault_o[FaultRegIntg]      = async_fault_o[AsyncFaultRegIntg];
+  assign fault_o[FaultShadow]       = async_fault_o[AsyncFaultShadow];
+  assign fault_o[FaultCtrlFsm]      = async_fault_o[AsyncFaultFsmIntg];
+  assign fault_o[FaultCtrlFsmChk]   = async_fault_o[AsyncFaultFsmChk];
+  assign fault_o[FaultCtrlCnt]      = async_fault_o[AsyncFaultCntErr];
+  assign fault_o[FaultReseedCnt]    = async_fault_o[AsyncFaultRCntErr];
+  assign fault_o[FaultSideFsm]      = async_fault_o[AsyncFaultSideErr];
+  assign fault_o[FaultKeyEcc]       = async_fault_o[AsyncFaultKeyEcc];
+  assign fault_o[FaultKdfEngineDec] = async_fault_o[AsyncFaultKdfEngineDecErr];
 
 
 endmodule // keymgr_dpe_err

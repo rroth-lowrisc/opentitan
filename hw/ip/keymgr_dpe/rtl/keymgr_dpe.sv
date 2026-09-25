@@ -110,6 +110,7 @@ module keymgr_dpe
 
   import prim_mubi_pkg::mubi4_test_true_strict;
   import prim_mubi_pkg::mubi4_test_false_strict;
+  import prim_mubi_pkg::mubi4_test_invalid;
   import lc_ctrl_pkg::lc_tx_test_true_strict;
   import lc_ctrl_pkg::lc_tx_test_false_loose;
   import lc_ctrl_pkg::lc_tx_t;
@@ -209,10 +210,6 @@ module keymgr_dpe
     .shadowed_update_err_o  (shadowed_update_err),
     .intg_err_o             (regfile_intg_err)
   );
-
-  // TODO: read unassigned register to avoid linter error
-  logic unused_register;
-  assign unused_register = (^reg2hw.kdf_engine.q);
 
   /////////////////////////////////////
   //  Synchronize lc_ctrl control inputs
@@ -327,7 +324,10 @@ module keymgr_dpe
   logic sideload_fsm_err;
   logic sideload_sel_err;
   logic key_version_vld;
+  logic kdf_engine_mubi_err;
 
+  // Verify mubi signal is correctly encoded
+  assign kdf_engine_mubi_err = mubi4_test_invalid(prim_mubi_pkg::mubi4_t'(reg2hw.kdf_engine.q));
 
   for (genvar i = 0; i < Shares; i++) begin : gen_truncate_data
     assign kmac_data_truncated[i] = kmac_data[i][KeyWidth-1:0];
@@ -388,6 +388,7 @@ module keymgr_dpe
     .reseed_cnt_err_i(reseed_cnt_err),
     .sideload_sel_err_i(sideload_sel_err),
     .sideload_fsm_err_i(sideload_fsm_err),
+    .kdf_engine_mubi_err_i(kdf_engine_mubi_err),
     .prng_reseed_req_o(reseed_req),
     .prng_reseed_ack_i(reseed_ack),
     .prng_reseed_done_i(reseed_done),
@@ -844,34 +845,36 @@ module keymgr_dpe
   assign hw2reg.err_code.invalid_kmac_input.de    = err_code[ErrInvalidIn];
   assign hw2reg.err_code.invalid_shadow_update.de = err_code[ErrShadowUpdate];
 
-  assign hw2reg.fault_status.cmd.de           = fault_code[FaultKmacCmd];
-  assign hw2reg.fault_status.kmac_fsm.de      = fault_code[FaultKmacFsm];
-  assign hw2reg.fault_status.kmac_op.de       = fault_code[FaultKmacOp];
-  assign hw2reg.fault_status.kmac_done.de     = fault_code[FaultKmacDone];
-  assign hw2reg.fault_status.kmac_out.de      = fault_code[FaultKmacOut];
-  assign hw2reg.fault_status.regfile_intg.de  = fault_code[FaultRegIntg];
-  assign hw2reg.fault_status.shadow.de        = fault_code[FaultShadow];
-  assign hw2reg.fault_status.ctrl_fsm_intg.de = fault_code[FaultCtrlFsm];
-  assign hw2reg.fault_status.ctrl_fsm_chk.de  = fault_code[FaultCtrlFsmChk];
-  assign hw2reg.fault_status.ctrl_fsm_cnt.de  = fault_code[FaultCtrlCnt];
-  assign hw2reg.fault_status.reseed_cnt.de    = fault_code[FaultReseedCnt];
-  assign hw2reg.fault_status.side_ctrl_fsm.de = fault_code[FaultSideFsm];
-  assign hw2reg.fault_status.side_ctrl_sel.de = fault_code[FaultSideSel];
-  assign hw2reg.fault_status.key_ecc.de       = fault_code[FaultKeyEcc];
-  assign hw2reg.fault_status.cmd.d            = 1'b1;
-  assign hw2reg.fault_status.kmac_fsm.d       = 1'b1;
-  assign hw2reg.fault_status.kmac_done.d      = 1'b1;
-  assign hw2reg.fault_status.kmac_op.d        = 1'b1;
-  assign hw2reg.fault_status.kmac_out.d       = 1'b1;
-  assign hw2reg.fault_status.regfile_intg.d   = 1'b1;
-  assign hw2reg.fault_status.shadow.d         = 1'b1;
-  assign hw2reg.fault_status.ctrl_fsm_intg.d  = 1'b1;
-  assign hw2reg.fault_status.ctrl_fsm_chk.d   = 1'b1;
-  assign hw2reg.fault_status.ctrl_fsm_cnt.d   = 1'b1;
-  assign hw2reg.fault_status.reseed_cnt.d     = 1'b1;
-  assign hw2reg.fault_status.side_ctrl_fsm.d  = 1'b1;
-  assign hw2reg.fault_status.side_ctrl_sel.d  = 1'b1;
-  assign hw2reg.fault_status.key_ecc.d        = 1'b1;
+  assign hw2reg.fault_status.cmd.de            = fault_code[FaultKmacCmd];
+  assign hw2reg.fault_status.kmac_fsm.de       = fault_code[FaultKmacFsm];
+  assign hw2reg.fault_status.kmac_op.de        = fault_code[FaultKmacOp];
+  assign hw2reg.fault_status.kmac_done.de      = fault_code[FaultKmacDone];
+  assign hw2reg.fault_status.kmac_out.de       = fault_code[FaultKmacOut];
+  assign hw2reg.fault_status.regfile_intg.de   = fault_code[FaultRegIntg];
+  assign hw2reg.fault_status.shadow.de         = fault_code[FaultShadow];
+  assign hw2reg.fault_status.ctrl_fsm_intg.de  = fault_code[FaultCtrlFsm];
+  assign hw2reg.fault_status.ctrl_fsm_chk.de   = fault_code[FaultCtrlFsmChk];
+  assign hw2reg.fault_status.ctrl_fsm_cnt.de   = fault_code[FaultCtrlCnt];
+  assign hw2reg.fault_status.reseed_cnt.de     = fault_code[FaultReseedCnt];
+  assign hw2reg.fault_status.side_ctrl_fsm.de  = fault_code[FaultSideFsm];
+  assign hw2reg.fault_status.side_ctrl_sel.de  = fault_code[FaultSideSel];
+  assign hw2reg.fault_status.key_ecc.de        = fault_code[FaultKeyEcc];
+  assign hw2reg.fault_status.kdf_engine_dec.de = fault_code[FaultKdfEngineDec];
+  assign hw2reg.fault_status.cmd.d             = 1'b1;
+  assign hw2reg.fault_status.kmac_fsm.d        = 1'b1;
+  assign hw2reg.fault_status.kmac_done.d       = 1'b1;
+  assign hw2reg.fault_status.kmac_op.d         = 1'b1;
+  assign hw2reg.fault_status.kmac_out.d        = 1'b1;
+  assign hw2reg.fault_status.regfile_intg.d    = 1'b1;
+  assign hw2reg.fault_status.shadow.d          = 1'b1;
+  assign hw2reg.fault_status.ctrl_fsm_intg.d   = 1'b1;
+  assign hw2reg.fault_status.ctrl_fsm_chk.d    = 1'b1;
+  assign hw2reg.fault_status.ctrl_fsm_cnt.d    = 1'b1;
+  assign hw2reg.fault_status.reseed_cnt.d      = 1'b1;
+  assign hw2reg.fault_status.side_ctrl_fsm.d   = 1'b1;
+  assign hw2reg.fault_status.side_ctrl_sel.d   = 1'b1;
+  assign hw2reg.fault_status.key_ecc.d         = 1'b1;
+  assign hw2reg.fault_status.kdf_engine_dec.d  = 1'b1;
 
   // There are two types of alerts
   // - alerts for hardware errors, these could not have been generated by software.

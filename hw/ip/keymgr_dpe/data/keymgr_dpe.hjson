@@ -1171,6 +1171,11 @@ countermeasures: [
           resval: "0x0"
           desc: "Secret key ecc error, asynchronous fault",
         },
+        { bits: "14",
+          name: "KDF_ENGINE_DEC",
+          resval: "0x0"
+          desc: "Kdf engine mubi signal decode error, asynchronous fault",
+        },
       ]
     },
 
