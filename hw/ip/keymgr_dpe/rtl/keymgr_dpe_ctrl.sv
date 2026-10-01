@@ -304,9 +304,10 @@ module keymgr_dpe_ctrl
     assign next_boot_stage =
         (active_key_slot_o.boot_stage == BootStageCreator) ? BootStageOwner :
         BootStageRuntime;
-  end else begin : gen_three_boot_stage
+  end else begin : gen_four_boot_stage
     assign next_boot_stage =
-        (active_key_slot_o.boot_stage == BootStageCreator) ? BootStageOwnerInt :
+        (active_key_slot_o.boot_stage == BootStageCreator) ? BootStageCreatorInt :
+        (active_key_slot_o.boot_stage == BootStageCreatorInt) ? BootStageOwnerInt :
         (active_key_slot_o.boot_stage == BootStageOwnerInt) ? BootStageOwner :
         BootStageRuntime;
   end
@@ -786,7 +787,7 @@ module keymgr_dpe_ctrl
                              (SyncFaultLastIdx + AsyncFaultLastIdx))
 
   // verify supported number of boot stage
-  `ASSERT_INIT(InvalidNumOfBootStage_A, NumBootStages inside {2, 3})
+  `ASSERT_INIT(InvalidNumOfBootStage_A, NumBootStages inside {2, 4})
 
 
   // // stage select should always be Disable whenever it is not enabled
