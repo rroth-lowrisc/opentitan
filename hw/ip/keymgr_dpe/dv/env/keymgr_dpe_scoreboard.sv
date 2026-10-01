@@ -50,6 +50,16 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
         unused;
     // SW_CDI_INPUT
     bit [keymgr_dpe_reg_pkg::NumSwBindingReg-1:0][TL_DW-1:0] SoftwareBinding;
+    // FIELD_ENTROPY
+    bit [keymgr_dpe_pkg::KeyWidth-1:0] FieldEntropy;
+  } adv_creator_int_data_t;
+
+  typedef struct packed {
+    // some portions are unused, which are 0s
+    bit [keymgr_dpe_env_pkg::DvDpeAdvDataWidth-keymgr_dpe_pkg::KeyWidth-keymgr_dpe_pkg::SwBindingWidth-1:0]
+        unused;
+    // SW_CDI_INPUT
+    bit [keymgr_dpe_reg_pkg::NumSwBindingReg-1:0][TL_DW-1:0] SoftwareBinding;
     // CREATOR_SEED
     bit [keymgr_dpe_pkg::KeyWidth-1:0] CreatorRootSecret;
   } adv_owner_int_data_t;
@@ -229,23 +239,33 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
                 .exp_match(!is_err),
                 .byte_data_q(req_bytes)
               );
-            end else if (boot_stage == keymgr_dpe_pkg::BootStageOwnerInt) begin
+            end else if(boot_stage == keymgr_dpe_pkg::BootStageCreatorInt) begin
               `uvm_info(`gfn,
                         $sformatf({"process_kmac_data_req: boot_stage %0d ",
                                    "is_err %0d compare_boot_stage_1_data"},
                                    boot_stage, is_err),
                         UVM_LOW)
-               compare_boot_stage_1_data(
+              compare_boot_stage_1_data(
                 .exp_match(!is_err),
                 .byte_data_q(req_bytes)
-               );
-            end else if (boot_stage == keymgr_dpe_pkg::BootStageOwner) begin
+              );
+            end else if (boot_stage == keymgr_dpe_pkg::BootStageOwnerInt) begin
               `uvm_info(`gfn,
                         $sformatf({"process_kmac_data_req: boot_stage %0d ",
                                    "is_err %0d compare_boot_stage_2_data"},
                                    boot_stage, is_err),
                         UVM_LOW)
                compare_boot_stage_2_data(
+                .exp_match(!is_err),
+                .byte_data_q(req_bytes)
+               );
+            end else if (boot_stage == keymgr_dpe_pkg::BootStageOwner) begin
+              `uvm_info(`gfn,
+                        $sformatf({"process_kmac_data_req: boot_stage %0d ",
+                                   "is_err %0d compare_boot_stage_3_data"},
+                                   boot_stage, is_err),
+                        UVM_LOW)
+               compare_boot_stage_3_data(
                 .exp_match(!is_err),
                 .byte_data_q(req_bytes)
                );
@@ -335,8 +355,12 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
                 keymgr_dpe_pkg::BootStageOwner;
             end else begin
               current_internal_key[current_key_slot.dst_slot].boot_stage =
-                keymgr_dpe_pkg::BootStageOwnerInt;
+                keymgr_dpe_pkg::BootStageCreatorInt;
             end
+          end
+          keymgr_dpe_pkg::BootStageCreatorInt: begin
+            current_internal_key[current_key_slot.dst_slot].boot_stage =
+              keymgr_dpe_pkg::BootStageOwnerInt;
           end
           keymgr_dpe_pkg::BootStageOwnerInt: begin
             current_internal_key[current_key_slot.dst_slot].boot_stage =
@@ -1469,11 +1493,49 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
       bit exp_match,
       const ref byte unsigned byte_data_q[$]
     );
-    adv_owner_int_data_t exp, act;
+    adv_creator_int_data_t exp, act;
     string str = $sformatf("src_slot: %0d\n", current_key_slot.src_slot);
 
     `uvm_info(`gfn,
               $sformatf("compare_boot_stage_1_data src_slot %0d src_slot_val %p",
+                        current_key_slot.src_slot,
+                        current_internal_key[current_key_slot.src_slot]),
+              UVM_HIGH)
+
+    act = {<<8{byte_data_q}};
+    // If the field entropy is provisioned the design uses the secret directly,
+    // otherwise the netlist constant RndCnstFieldEntropySeed is used.
+    if (cfg.keymgr_dpe_vif.field_entropy.secret_valid) begin
+      exp.FieldEntropy = cfg.keymgr_dpe_vif.field_entropy.secret;
+    end else begin
+      exp.FieldEntropy = keymgr_dpe_pkg::RndCnstFieldEntropySeedDefault;
+    end
+    get_sw_binding_mirrored_value(exp.SoftwareBinding);
+
+    `CREATE_CMP_STR(unused)
+    `CREATE_CMP_STR(FieldEntropy)
+    for (int i = 0; i < keymgr_dpe_reg_pkg::NumSwBindingReg; i++) begin
+      `CREATE_CMP_STR(SoftwareBinding[i])
+    end
+
+    if (exp_match) begin
+      `DV_CHECK_EQ(act, exp, str)
+    end else begin
+      `DV_CHECK_NE(act, exp, str)
+    end
+
+    if (exp_match) adv_data_a_array[current_key_slot.src_slot][current_state] = act;
+  endfunction
+
+  virtual function void compare_boot_stage_2_data(
+      bit exp_match,
+      const ref byte unsigned byte_data_q[$]
+    );
+    adv_owner_int_data_t exp, act;
+    string str = $sformatf("src_slot: %0d\n", current_key_slot.src_slot);
+
+    `uvm_info(`gfn,
+              $sformatf("compare_boot_stage_2_data src_slot %0d src_slot_val %p",
                         current_key_slot.src_slot,
                         current_internal_key[current_key_slot.src_slot]),
               UVM_HIGH)
@@ -1497,7 +1559,7 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     if (exp_match) adv_data_a_array[current_key_slot.src_slot][current_state] = act;
   endfunction
 
-  virtual function void compare_boot_stage_2_data(
+  virtual function void compare_boot_stage_3_data(
       bit exp_match,
       const ref byte unsigned byte_data_q[$]
     );
@@ -1505,7 +1567,7 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     string str = $sformatf("src_slot: %0d\n", current_key_slot.src_slot);
 
     `uvm_info(`gfn,
-              $sformatf("compare_boot_stage_2_data src_slot %0d src_slot_val %p",
+              $sformatf("compare_boot_stage_3_data src_slot %0d src_slot_val %p",
                         current_key_slot.src_slot,
                         current_internal_key[current_key_slot.src_slot]),
               UVM_HIGH)
@@ -1529,7 +1591,7 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     if (exp_match) adv_data_a_array[current_key_slot.src_slot][current_state] = act;
   endfunction
 
-  // For boot stages >= 2, we expect the same key material format
+  // For boot stages >= 3, we expect the same key material format
   // being sent out to the kmac engine
   virtual function void compare_boot_stage_runtime_data(
      bit exp_match,
