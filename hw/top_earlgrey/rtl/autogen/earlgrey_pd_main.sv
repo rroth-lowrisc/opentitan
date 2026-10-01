@@ -324,7 +324,7 @@ module earlgrey_pd_main #(
   localparam int RramMacroMaxWrWords = rram_ctrl_pkg::MaxWrWords;
   // local parameters for keymgr_dpe
   localparam int KeymgrDpeNumInstHwSlot = 4;
-  localparam int KeymgrDpeNumBootStages = 3;
+  localparam int KeymgrDpeNumBootStages = 4;
   localparam int KeymgrDpeNumRomDigestInputs = 1;
   // local parameters for entropy_src
   localparam int EntropySrcEsFifoDepth = 3;
@@ -2241,6 +2241,7 @@ module earlgrey_pd_main #(
     .RndCnstAesSeed(RndCnstKeymgrDpeAesSeed),
     .RndCnstKmacSeed(RndCnstKeymgrDpeKmacSeed),
     .RndCnstOtbnSeed(RndCnstKeymgrDpeOtbnSeed),
+    .RndCnstFieldEntropySeed(RndCnstKeymgrDpeFieldEntropySeed),
     .RndCnstNoneSeed(RndCnstKeymgrDpeNoneSeed),
     .NumInstHwSlot(KeymgrDpeNumInstHwSlot),
     .NumBootStages(KeymgrDpeNumBootStages),
@@ -2274,6 +2275,7 @@ module earlgrey_pd_main #(
     .creator_seed_i(keymgr_dpe_creator_seed),
     .owner_seed_i(keymgr_dpe_owner_seed),
     .device_id_i(keymgr_dpe_device_id),
+    .field_entropy_i(keymgr_dpe_pkg::KEYMGR_DPE_FIELD_ENTROPY_DEFAULT),
     .lc_keymgr_en_i(lc_ctrl_lc_keymgr_en),
     .lc_keymgr_div_i(lc_ctrl_lc_keymgr_div),
     .rom_digest_i(rom_ctrl_keymgr_data),
