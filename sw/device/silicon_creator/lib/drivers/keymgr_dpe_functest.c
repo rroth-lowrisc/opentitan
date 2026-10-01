@@ -153,7 +153,30 @@ rom_error_t keymgr_dpe_rom_test(void) {
   }
 
   // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
-  // hold keys with boot stage set to BootStageOwnerInt (1). (Note:
+  // hold keys with boot stage set to BootStageCreatorInt (1). (Note:
+  // Current bootstage + 1)
+
+  // ------ CreatorIntKey Stage ------------------------
+  // Derive both the attestation and sealing CreatorIntKey. Same as in the
+  // immutable ROM_EXT section.
+  // TODO(rroth): The CreatorIntKeys currently reuse the binding values and the
+  // max key version of the OwnerIntKeys. Define dedicated values.
+  attestation_key.binding_value = &kBindingValueRomExt;
+  attestation_key.version = kMaxVerRomExt;
+  sealing_key.binding_value = &kBindingValueRomExt;
+  sealing_key.version = kMaxVerRomExt;
+
+  SEC_MMIO_WRITE_INCREMENT(
+      2 * (kScKeymgrDPESecMmioSwBindingSet + kScKeymgrDPESecMmioMaxVerSet));
+  SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSlotPolicy));
+
+  RETURN_IF_ERROR(
+      sc_keymgr_dpe_advance_creator_int(sealing_key, attestation_key));
+  LOG_INFO("Keymgr DPE: CreatorIntKey derived");
+  sec_mmio_check_values(/*rnd_offset=*/0);
+
+  // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
+  // hold keys with boot stage set to BootStageOwnerInt (2). (Note:
   // Current bootstage + 1)
 
   // ------ OwnerIntKey Stage ------------------------
@@ -172,10 +195,10 @@ rom_error_t keymgr_dpe_rom_test(void) {
   LOG_INFO("Keymgr DPE: OwnerIntKey derived");
   sec_mmio_check_values(/*rnd_offset=*/0);
 
-  sec_mmio_check_counters(/*expected_check_count=*/3);
+  sec_mmio_check_counters(/*expected_check_count=*/4);
 
   // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
-  // hold keys with boot stage set to BootStageOwner (2). (Note:
+  // hold keys with boot stage set to BootStageOwner (3). (Note:
   // Current bootstage + 1)
   return kErrorOk;
 }
@@ -205,10 +228,10 @@ rom_error_t keymgr_dpe_rom_ext_test(void) {
   LOG_INFO("Keymgr DPE: OwnerKey derived");
   sec_mmio_check_values(/*rnd_offset=*/0);
 
-  sec_mmio_check_counters(/*expected_check_count=*/5);
+  sec_mmio_check_counters(/*expected_check_count=*/6);
 
   // TODO(#30759): Verify the kKeymgrDPESealSlot / kKeymgrDPEAttestSlot
-  // hold keys with boot stage set to BootStageRuntime (3). (Note:
+  // hold keys with boot stage set to BootStageRuntime (4). (Note:
   // Current bootstage + 1)
   return kErrorOk;
 }
