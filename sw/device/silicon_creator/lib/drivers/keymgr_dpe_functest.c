@@ -161,9 +161,35 @@ rom_error_t keymgr_dpe_rom_test(void) {
   }
 
   CHECK(sc_keymgr_dpe_check_metadata(kSealingSlot, creator_max_key_version,
-                                     kScKeymgrDPEBootStageOwnerInt,
+                                     kScKeymgrDPEBootStageCreatorInt,
                                      &kDefaultPolicy) == kErrorOk);
   CHECK(sc_keymgr_dpe_check_metadata(kAttestationSlot, creator_max_key_version,
+                                     kScKeymgrDPEBootStageCreatorInt,
+                                     &kDefaultPolicy) == kErrorOk);
+
+  // ------ CreatorIntKey Stage ------------------------
+  // Derive both the attestation and sealing CreatorIntKey. Same as in the
+  // immutable ROM_EXT section.
+  // TODO(rroth): The CreatorIntKeys currently reuse the binding values and the
+  // max key version of the OwnerIntKeys. Define dedicated values.
+  attestation_key.binding_value = &kBindingValueRomExt;
+  attestation_key.version = kMaxVerRomExt;
+  sealing_key.binding_value = &kBindingValueRomExt;
+  sealing_key.version = kMaxVerRomExt;
+
+  SEC_MMIO_WRITE_INCREMENT(
+      2 * (kScKeymgrDPESecMmioSwBindingSet + kScKeymgrDPESecMmioMaxVerSet));
+  SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSlotPolicy));
+
+  RETURN_IF_ERROR(
+      sc_keymgr_dpe_advance_creator_int(sealing_key, attestation_key));
+  LOG_INFO("Keymgr DPE: CreatorIntKey derived");
+  sec_mmio_check_values(/*rnd_offset=*/0);
+
+  CHECK(sc_keymgr_dpe_check_metadata(kSealingSlot, kMaxVerRomExt,
+                                     kScKeymgrDPEBootStageOwnerInt,
+                                     &kDefaultPolicy) == kErrorOk);
+  CHECK(sc_keymgr_dpe_check_metadata(kAttestationSlot, kMaxVerRomExt,
                                      kScKeymgrDPEBootStageOwnerInt,
                                      &kDefaultPolicy) == kErrorOk);
 
@@ -183,7 +209,7 @@ rom_error_t keymgr_dpe_rom_test(void) {
   LOG_INFO("Keymgr DPE: OwnerIntKey derived");
   sec_mmio_check_values(/*rnd_offset=*/0);
 
-  sec_mmio_check_counters(/*expected_check_count=*/3);
+  sec_mmio_check_counters(/*expected_check_count=*/4);
 
   CHECK(sc_keymgr_dpe_check_metadata(kSealingSlot, kMaxVerRomExt,
                                      kScKeymgrDPEBootStageOwner,
@@ -219,7 +245,7 @@ rom_error_t keymgr_dpe_rom_ext_test(void) {
   LOG_INFO("Keymgr DPE: OwnerKey derived");
   sec_mmio_check_values(/*rnd_offset=*/0);
 
-  sec_mmio_check_counters(/*expected_check_count=*/5);
+  sec_mmio_check_counters(/*expected_check_count=*/6);
 
   CHECK(sc_keymgr_dpe_check_metadata(kSealingSlot, kMaxVerBl0,
                                      kScKeymgrDPEBootStageRuntime,
