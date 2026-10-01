@@ -170,6 +170,9 @@ package keymgr_dpe_pkg;
     256'hc57f4c0b_b308e83f_3fc4bc63_d87dd67d_9071dc1c_e19484c8_3c94fb97_dd634369;
   parameter seed_t RndCnstOtbnSeedDefault =
     256'hcbcb4d2d_0abeb81b_ca7451ae_d1e2479d_ba13530a_d046b945_646aa127_bd4f6a38;
+  // seed argument: --seed 7535202
+  parameter seed_t RndCnstFieldEntropySeedDefault =
+    256'h19669f9d_6d107781_779533fd_58546820_b8339f55_694f5a36_ee23e819_00f8fc6b;
 
 
   //////////////////////////////////////
@@ -185,6 +188,13 @@ package keymgr_dpe_pkg;
   } keymgr_dpe_creator_root_key_t;
 
   typedef struct packed {
+    logic [KeyWidth-1:0]  share0;
+    logic                 share0_valid;
+    logic [KeyWidth-1:0]  share1;
+    logic                 share1_valid;
+  } keymgr_dpe_field_entropy_t;
+
+  typedef struct packed {
     logic [KeyWidth-1:0]  seed;
     logic                 seed_valid;
   } keymgr_dpe_creator_seed_t;
@@ -198,6 +208,13 @@ package keymgr_dpe_pkg;
     share0       : 256'hefb7ea7ee90093cf4affd9aaa2d6c0ec446cfdf5f2d5a0bfd7e2d93edc63a102,
     share0_valid : 1'b1,
     share1       : 256'h56d24a00181de99e0f690b447a8dde2a1ffb8bc306707107aa6e2410f15cfc37,
+    share1_valid : 1'b1
+  };
+
+  parameter keymgr_dpe_field_entropy_t KEYMGR_DPE_FIELD_ENTROPY_DEFAULT = '{
+    share0       : 256'h3b7828287b9f2de22908788d726f352f5b116ea077166140f5581458f7ac74b7,
+    share0_valid : 1'b1,
+    share1       : 256'h51797bbc758eff6be33494a42555301f07855896513b74d8b7733b50d3c0d536,
     share1_valid : 1'b1
   };
 
@@ -245,12 +262,13 @@ package keymgr_dpe_pkg;
 
   // Enumeration for boot stage. In the BootStageRuntime stage, there is no limit on the number of
   // advance calls.
-  parameter int DpeBootStagesWidth = 2;
+  parameter int DpeBootStagesWidth = 3;
   typedef enum logic [DpeBootStagesWidth-1:0] {
-    BootStageCreator  = 0,
-    BootStageOwnerInt = 1,
-    BootStageOwner    = 2,
-    BootStageRuntime  = 3
+    BootStageCreator    = 0,
+    BootStageCreatorInt = 1,
+    BootStageOwnerInt   = 2,
+    BootStageOwner      = 3,
+    BootStageRuntime    = 4
   } keymgr_dpe_boot_stage_e;
 
   // An internal secret key slot
