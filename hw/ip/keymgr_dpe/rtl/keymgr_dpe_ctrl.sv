@@ -37,6 +37,7 @@ module keymgr_dpe_ctrl
   input op_start_i,
   input keymgr_dpe_ops_e op_i,
   input load_key_lock_i,
+  input load_secondary_key_lock_i,
   input [NumInstHwSlotWidth-1:0] slot_src_sel_i,
   input [NumInstHwSlotWidth-1:0] slot_dst_sel_i,
   input keymgr_dpe_policy_t slot_policy_i,
@@ -63,6 +64,7 @@ module keymgr_dpe_ctrl
 
   // Data input
   input hw_key_req_t root_key_i,
+  input hw_key_req_t secondary_root_key_i,
   // `hw_sel_o == 1` indicates whether the generated key output
   // goes to sideload port. The safe default here is software CSR key.
   output prim_mubi_pkg::mubi4_t hw_sel_o,
