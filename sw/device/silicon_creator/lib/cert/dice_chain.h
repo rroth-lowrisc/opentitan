@@ -84,7 +84,8 @@ rom_error_t dice_chain_attestation_creator(
     const manifest_t *rom_manifest);
 
 /**
- * Check the CDI_0 certificate and regenerate if invalid.
+ * Derive the creator int keys and the owner int keys for the dice chain. Check
+ * the CDI_0 certificate and regenerate if invalid.
  *
  * @param rom_ext_measurement Pointer to the measurements to attest.
  * @param rom_ext_manifest Pointer to the current rom_ext manifest.
