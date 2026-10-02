@@ -389,7 +389,16 @@ rom_error_t dice_chain_attestation_owner_int(
       .version = rom_ext_manifest->max_key_version,
   };
 
-  // Derive the OwnerIntKeys from the CreatorRootKeys
+  // Derive the CreatorIntKeys from the CreatorRootKeys
+  // TODO(rroth): The CreatorIntKeys currently reuse the binding values and the
+  // max key version of the OwnerIntKeys. Define dedicated values.
+  SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSwBindingSet +
+                                kScKeymgrDPESecMmioMaxVerSet +
+                                kScKeymgrDPESecMmioSlotPolicy));
+  HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_advance_creator_int(
+      adv_sealing_data, adv_attestation_data));
+
+  // Derive the OwnerIntKeys from the CreatorIntKeys
   SEC_MMIO_WRITE_INCREMENT(2 * (kScKeymgrDPESecMmioSwBindingSet +
                                 kScKeymgrDPESecMmioMaxVerSet +
                                 kScKeymgrDPESecMmioSlotPolicy));
