@@ -85,7 +85,7 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
 
     super.body();
 
-    // Wait for keymgr_dpe to become available and thus have consumed the creator root key (aka UDS)
+    // Wait for keymgr_dpe to become available and thus have consumed the creator root key
     // into a boot stage 0 key.
     `DV_WAIT(cfg.sw_logger_vif.printed_log == "KeymgrDpe derived boot stage 0 key",
              "Timed out waiting for keymgr_dpe to derive boot stage 0 key",
@@ -110,10 +110,10 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
       // both shares together for both keys and compare this result!
       stage_key_unmasked = get_unmasked_key(stage_0_key);
       otp_root_key_unmasked = get_unmasked_key(otp_root_key);
-      // Compare the UDS with its ground truth
+      // Compare the root key with its ground truth
       `DV_CHECK_EQ(valid_found, 1'b1, "Expecting one valid key slot")
       `DV_CHECK_EQ(stage_key_unmasked, otp_root_key_unmasked,
-                   $sformatf("Expecting UDS in dpe context to be equal to the UDS from OTP"));
+                   "Expecting the root key in dpe context to be equal to the root key from OTP");
     end
     `uvm_info(`gfn, $sformatf("Boot stage 0 key:\n%s", key_shares_str(stage_0_key)), UVM_LOW)
 

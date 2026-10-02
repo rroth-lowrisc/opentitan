@@ -191,7 +191,7 @@ bool test_main(void) {
   // Init the otbn
   CHECK_DIF_OK(dif_otbn_init_from_dt(kOtbnDt, &otbn));
   // DV SYNC MESSAGE
-  LOG_INFO("KeymgrDpe derived CreatorRootKey and removed the UDS");
+  LOG_INFO("KeymgrDpe derived CreatorRootKey and removed the root key");
   LOG_INFO("KeymgrDpe is ready for the OTBN test!");
 
   // Test OTBN sideloading.

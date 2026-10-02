@@ -38,7 +38,7 @@ package keymgr_dpe_env_pkg;
   parameter int DvNumRomDigestInputs = `DEF_DV_NUM_ROM_DIGEST;
 
   // Advance width calculation
-  // When deriving from the UDS the following data are consumed (Not ordered):
+  // When deriving from the root key the following data are consumed (Not ordered):
   //   - Software binding
   //   - Revision seed
   //   - OTP device ID

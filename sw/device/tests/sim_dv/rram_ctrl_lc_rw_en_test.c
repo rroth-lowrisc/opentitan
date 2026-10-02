@@ -268,10 +268,10 @@ bool test_main(void) {
     partition_check(kTest[kCheckIdLcDevIsoPartAccess]);
 
     // The DUT has not been personalized (OTP SECRET2 not locked), so loading
-    // the UDS will silently move keymgr_dpe to the Invalid state rather than
-    // Available. No OP_DONE_ERROR is raised in this case.
-    CHECK_STATUS_OK(
-        keymgr_dpe_testutils_initial_load_uds(&keymgr_dpe, &kInitialParams));
+    // the root key will silently move keymgr_dpe to the Invalid state rather
+    // than Available. No OP_DONE_ERROR is raised in this case.
+    CHECK_STATUS_OK(keymgr_dpe_testutils_initial_load_root_key(
+        &keymgr_dpe, &kInitialParams));
     CHECK_STATUS_OK(keymgr_dpe_testutils_check_state(
         &keymgr_dpe, kDifKeymgrDpeStateInvalid));
 
@@ -281,9 +281,9 @@ bool test_main(void) {
     partition_check(kTest[kCheckIdProvisionedOwnerSeed]);
     partition_check(kTest[kCheckIdLcProdIsoPartAccess]);
 
-    // OTP SECRET2 is locked; load UDS and expect Available state.
-    CHECK_STATUS_OK(
-        keymgr_dpe_testutils_initial_load_uds(&keymgr_dpe, &kInitialParams));
+    // OTP SECRET2 is locked; load the root key and expect Available state.
+    CHECK_STATUS_OK(keymgr_dpe_testutils_initial_load_root_key(
+        &keymgr_dpe, &kInitialParams));
     CHECK_STATUS_OK(keymgr_dpe_testutils_check_state(
         &keymgr_dpe, kDifKeymgrDpeStateAvailable));
 

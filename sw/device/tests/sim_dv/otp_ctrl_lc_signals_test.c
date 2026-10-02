@@ -217,8 +217,8 @@ static void keymgr_dpe_advance_to_creator_root_key(bool expect_init_fail) {
         keymgr_dpe_testutils_check_state(&keymgr_dpe, kDifKeymgrDpeStateReset));
     // The HW does not raise any OP_DONE_ERROR when the root key (from otp) is
     // not valid. The state is silently changed to "kDifKeymgrDpeStateInvalid"
-    CHECK_STATUS_OK(
-        keymgr_dpe_testutils_initial_load_uds(&keymgr_dpe, &kInitialParams));
+    CHECK_STATUS_OK(keymgr_dpe_testutils_initial_load_root_key(
+        &keymgr_dpe, &kInitialParams));
     const dif_keymgr_dpe_state_t exp_state = expect_init_fail
                                                  ? kDifKeymgrDpeStateInvalid
                                                  : kDifKeymgrDpeStateAvailable;
