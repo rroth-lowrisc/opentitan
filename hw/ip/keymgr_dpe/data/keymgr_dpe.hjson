@@ -508,9 +508,16 @@ countermeasures: [
               value: "5",
               name: "Load root key",
               desc: '''
-                Loads the root key into the key manager.
+                Loads the root key into the key manager. Can be disabled by !!LOAD_KEY_LOCK.
                 '''
-            }
+            },
+            {
+              value: "6",
+              name: "Load secondary root key",
+              desc: '''
+                Loads the secondary root key into the key manager. Can be disabled by !!LOAD_SECONDARY_KEY_LOCK.
+                '''
+            },
           ],
         },
 
@@ -1175,7 +1182,28 @@ countermeasures: [
     },
 
     { name: "LOAD_KEY_LOCK",
-      desc: "Register write lock for the LOAD_KEY command",
+      desc: "Register write lock for the `load root key` !!CONTROL_SHADOWED.OPERATION",
+      swaccess: "rw1s",
+      hwaccess: "hro",
+      fields: [
+        { bits: "0",
+          name: "LOCK",
+          resval: "0"
+          desc: '''
+            Load key register write lock.
+
+            Load key lock to 0, and its value cannot be altered by software until the next reset or locked.
+            Once locked, the LOAD_KEY command is disabled.
+          '''
+        },
+      ]
+      // Don't let automated CSR tests write random values to this register, as it could lock
+      // writing to other registers, which the automated tests are not aware of.
+      tags: ["excl:CsrAllTests:CsrExclWrite"]
+    },
+
+    { name: "LOAD_SECONDARY_KEY_LOCK",
+      desc: "Register write lock for the `load secondary root key` !!CONTROL_SHADOWED.OPERATION",
       swaccess: "rw1s",
       hwaccess: "hro",
       fields: [
