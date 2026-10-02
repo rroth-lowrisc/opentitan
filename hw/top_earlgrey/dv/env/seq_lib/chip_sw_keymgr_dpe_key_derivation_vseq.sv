@@ -13,7 +13,10 @@
 // - Configure the keymgr dpe and derive the `CreatorRootKey` from the UDS.
 // - Verify the correctness of the generated `CreatorRootKey`.
 // - Generate keys for OTBN / AES / KMAC / SW and verify each of the generated keys.
-// - Derive the `OwnerIntKey` from `CreatorRootKey`.
+// - Derive the `CreatorIntKey` from `CreatorRootKey` (consumes the field entropy).
+// - Verify the correctness of the generated `CreatorIntKey`.
+// - Generate keys for OTBN / AES / KMAC / SW and verify each of the generated keys.
+// - Derive the `OwnerIntKey` from `CreatorIntKey`.
 // - Verify the correctness of the generated `OwnerIntKey`.
 // - Generate keys for OTBN / AES / KMAC / SW and verify each of the generated keys.
 // - Derive the `OwnerKey` from `OwnerIntKey`.
@@ -50,6 +53,14 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
   // Must match the advance width defined as localparam inside the keymgr_dpe.sv.
   localparam int DpeAdvDataWidth = $bits(adv_creator_data_t);
   typedef bit [DpeAdvDataWidth-1:0] adv_data_t;
+
+  typedef struct packed {
+    // some portions are unused, which are 0s
+    bit [(DpeAdvDataWidth - keymgr_dpe_pkg::KeyWidth - keymgr_dpe_pkg::SwBindingWidth) - 1 : 0]
+                 unused;
+    sw_binding_t SoftwareBinding;
+    key_t        FieldEntropy;
+  } adv_creator_int_data_t;
 
   typedef struct packed {
     // some portions are unused, which are 0s
@@ -169,13 +180,14 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
       creator_key_slot_idx = 0;
       for (int i = 0; i < num_hw_slots; i++) begin
         keymgr_dpe_pkg::keymgr_dpe_slot_t slot = get_key_slot(i);
-        if (slot.valid && slot.boot_stage == keymgr_dpe_pkg::BootStageOwnerInt) begin
+        if (slot.valid && slot.boot_stage == keymgr_dpe_pkg::BootStageCreatorInt) begin
           `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 1 key")
           key_found = 1'b1;
           creator_key = slot.key;
           creator_key_slot_idx = i;
         end
       end
+      `DV_CHECK_EQ(key_found, 1'b1, "Expecting one boot stage 1 key")
     end
     `uvm_info(`gfn, $sformatf("CreatorRootKey is in slot %0d:\n%s", creator_key_slot_idx,
         key_shares_str(creator_key)), UVM_LOW)
@@ -189,8 +201,8 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
 
   // This test_sequence assumes the keymgr has derived the CreatorRootKey
   virtual task run_test_sequence(key_shares_t creator_key);
-    key_shares_t owner_int_key, owner_key, derived_key;
-    int owner_int_key_slot_idx, owner_key_slot_idx, derived_key_slot_idx;
+    key_shares_t creator_int_key, owner_int_key, owner_key, derived_key;
+    int creator_int_key_slot_idx, owner_int_key_slot_idx, owner_key_slot_idx, derived_key_slot_idx;
     // Verify that the outputs generated from the CreatorRootKey match the expectation.
     // Note that the values for version and salt must match those passed in SW. (Ideally, we would
     // backdoor-load them into SW to remove the redundancy, but that's no immediate priority.)
@@ -231,10 +243,63 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
                            .salt({32'h945642d9, 32'hfbcbc925, 32'hdb7b0691, 32'hcd973f4d,
                                   32'h278e051d, 32'h0d9f1f0d, 32'h45eff95b, 32'hb1ad6ba7}));
 
-    // Wait for keymgr_dpe to have advanced to boot stage 1 and thus have consumed the associated
+    // Wait for keymgr_dpe to have advanced to boot stage 2 and thus have consumed the associated
+    // values (field entropy).
+    cfg.sw_logger_vif.wait_for_log_message("KeymgrDpe derived CreatorIntKey");
+    // At this point, exactly one key slot should contain the boot stage 2 key. Verify that this
+    // holds.
+    begin
+      bit key_found = 1'b0;
+      creator_int_key_slot_idx = 0;
+      for (int i = 0; i < num_hw_slots; i++) begin
+        keymgr_dpe_pkg::keymgr_dpe_slot_t slot = get_key_slot(i);
+        if (slot.valid && slot.boot_stage == keymgr_dpe_pkg::BootStageOwnerInt) begin
+          `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 2 key")
+          key_found = 1'b1;
+          creator_int_key = slot.key;
+          creator_int_key_slot_idx = i;
+        end
+      end
+      `DV_CHECK_EQ(key_found, 1'b1, "Expecting one boot stage 2 key")
+    end
+    `uvm_info(`gfn, $sformatf("CreatorIntKey in slot %0d:\n%s", creator_int_key_slot_idx,
+        key_shares_str(creator_int_key)), UVM_LOW)
+
+    // Verify that the key was derived from the creator int data as expected.
+    check_derived_key(creator_key, get_creator_int_data(), creator_int_key);
+
+    // Verify that the outputs generated from the CreatorIntKey match the expectation.
+    // Note that the values for version and salt must match those passed in SW. (Ideally, we would
+    // backdoor-load them into SW to remove the redundancy, but that's no immediate priority.)
+    wait_for_keymgr_dpe_gen_output_msg("KMAC", "CreatorIntKey");
+    check_generated_output(.key_shares(creator_int_key),
+                           .dest(keymgr_dpe_pkg::Kmac),
+                           .version('d0),
+                           .salt({32'h3e8a91c4, 32'hb57d2e09, 32'h1c64f8a3, 32'h9f20d7b6,
+                                  32'h52e1ac38, 32'hd8437f15, 32'h06bc59e2, 32'ha1f3c470}));
+    wait_for_keymgr_dpe_gen_output_msg("AES", "CreatorIntKey");
+    check_generated_output(.key_shares(creator_int_key),
+                           .dest(keymgr_dpe_pkg::Aes),
+                           .version('d1),
+                           .salt({32'h7d19e6a2, 32'h4c83b05f, 32'he2a57d31, 32'h18f6c94e,
+                                  32'hb04d2a87, 32'h6e91f3c5, 32'hc35a087b, 32'h29e4b6d0}));
+    wait_for_keymgr_dpe_gen_output_msg("SW", "CreatorIntKey");
+    check_generated_output(.key_shares(creator_int_key),
+                           .dest(keymgr_dpe_pkg::None),
+                           .version('d2),
+                           .salt({32'h91c7a35e, 32'h0fd4682b, 32'h5ab31ec9, 32'he6082f74,
+                                  32'h3d79c510, 32'ha4e6b29f, 32'h7802d4e3, 32'hc1bf5a66}));
+    wait_for_keymgr_dpe_gen_output_msg("OTBN", "CreatorIntKey");
+    check_generated_output(.key_shares(creator_int_key),
+                           .dest(keymgr_dpe_pkg::Otbn),
+                           .version('d3),
+                           .salt({32'hf04b6c19, 32'h83e2a7d5, 32'h2b98f40e, 32'hd65c1b37,
+                                  32'h47a0e9c2, 32'h9e3d7058, 32'h15f2c8ab, 32'h6ac94d03}));
+
+    // Wait for keymgr_dpe to have advanced to boot stage 3 and thus have consumed the associated
     // values (creator seed etc.).
     cfg.sw_logger_vif.wait_for_log_message("KeymgrDpe derived OwnerIntKey");
-    // At this point, exactly one key slot should contain the boot stage 1 key. Verify that this
+    // At this point, exactly one key slot should contain the boot stage 3 key. Verify that this
     // holds.
     begin
       bit key_found = 1'b0;
@@ -242,18 +307,19 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
       for (int i = 0; i < num_hw_slots; i++) begin
         keymgr_dpe_pkg::keymgr_dpe_slot_t slot = get_key_slot(i);
         if (slot.valid && slot.boot_stage == keymgr_dpe_pkg::BootStageOwner) begin
-          `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 2 key")
+          `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 3 key")
           key_found = 1'b1;
           owner_int_key = slot.key;
           owner_int_key_slot_idx = i;
         end
       end
+      `DV_CHECK_EQ(key_found, 1'b1, "Expecting one boot stage 3 key")
     end
     `uvm_info(`gfn, $sformatf("OwnerIntKey in slot %0d:\n%s", owner_int_key_slot_idx,
         key_shares_str(owner_int_key)), UVM_LOW)
 
-    // Verify that the key was derived from the creator data as expected.
-    check_derived_key(creator_key, get_owner_int_data(), owner_int_key);
+    // Verify that the key was derived from the owner int data as expected.
+    check_derived_key(creator_int_key, get_owner_int_data(), owner_int_key);
 
     // Verify that the outputs generated from the OwnerIntKey match the expectation.
     // Note that the values for version and salt must match those passed in SW. (Ideally, we would
@@ -283,10 +349,10 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
                            .salt({32'h564712d4, 32'h7ab745f5, 32'h5fa8faa9, 32'h77fce728,
                                   32'hffa3fd3c, 32'h876930f2, 32'h593b54d4, 32'ha75e231b}));
 
-    // Wait for keymgr_dpe to have advanced to boot stage 2 and thus have consumed the owner seed
+    // Wait for keymgr_dpe to have advanced to boot stage 4 and thus have consumed the owner seed
     // and the owner SW binding.
     cfg.sw_logger_vif.wait_for_log_message("KeymgrDpe derived OwnerKey");
-    // At this point, exactly one key slot should contain the boot stage 2 key. Verify that this
+    // At this point, exactly one key slot should contain the boot stage 4 key. Verify that this
     // holds.
     begin
       bit key_found = 1'b0;
@@ -294,12 +360,13 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
       for (int i = 0; i < num_hw_slots; i++) begin
         keymgr_dpe_pkg::keymgr_dpe_slot_t slot = get_key_slot(i);
         if (slot.valid && slot.boot_stage == keymgr_dpe_pkg::BootStageRuntime) begin
-          `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 2 key")
+          `DV_CHECK_EQ(key_found, 1'b0, "Expecting only one boot stage 4 key")
           key_found = 1'b1;
           owner_key = slot.key;
           owner_key_slot_idx = i;
         end
       end
+      `DV_CHECK_EQ(key_found, 1'b1, "Expecting one boot stage 4 key")
     end
     `uvm_info(`gfn, $sformatf("OwnerKey in slot %0d:\n%s",
         owner_key_slot_idx, key_shares_str(owner_key)), UVM_LOW)
@@ -307,7 +374,7 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
     // Verify that the key was derived from the owner data as expected.
     check_derived_key(owner_int_key, get_owner_data(), owner_key);
 
-    // Verify that the outputs generated from the boot stage 2 key match the expectation.
+    // Verify that the outputs generated from the boot stage 4 key match the expectation.
     // Note that the values for version and salt must match those passed in SW. (Ideally, we would
     // backdoor-load them into SW to remove the redundancy, but that's no immediate priority.)
     wait_for_keymgr_dpe_gen_output_msg("SW", "OwnerKey");
@@ -335,9 +402,9 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
                            .salt({32'h3f184f9b, 32'hd4af6765, 32'h8abeb221, 32'haae3ca52,
                                   32'h29f7114f, 32'hf5bf3e01, 32'h6a961bc2, 32'hec932d64}));
 
-    // Wait for keymgr_dpe to have advanced to boot stage 3.
+    // Wait for keymgr_dpe to have derived a new DPE context which stays in boot stage 4.
     cfg.sw_logger_vif.wait_for_log_message("KeymgrDpe derived new DPE context from OwnerKey");
-    // At this point, exactly one key slot should contain the boot stage 3 key. Verify that this
+    // At this point, an additional key slot should contain a boot stage 4 key. Verify that this
     // holds.
     begin
      bit key_found = 1'b0;
@@ -395,8 +462,8 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
                            .salt({32'h06896da3, 32'h9ce2c0da, 32'haa23a965, 32'h108e57ca,
                                   32'hd926d474, 32'hb6ae40fc, 32'ha65d1375, 32'h6ee7be64}));
 
-    // Verify that the additional outputs generated from boot stage 3 and 4 keys, which should still
-    // be available, match the expectation.
+    // Verify that the additional outputs generated from the OwnerKey, which should still be
+    // available, match the expectation.
     // Note that the values for version and salt must match those passed in SW. (Ideally, we would
     // backdoor-load them into SW to remove the redundancy, but that's no immediate priority.)
     wait_for_keymgr_dpe_gen_output_msg("SW", "OwnerKey");
@@ -508,7 +575,29 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
     return adv_data_t'(creator_data);
   endfunction
 
-  // Collect data used as 'message' to derive the OwnerIntKey (boot stage 2).
+  // Collect data used as 'message' to derive the CreatorIntKey (boot stage 2).
+  virtual function adv_data_t get_creator_int_data();
+    adv_creator_int_data_t creator_int_data;
+
+    // Zero-pad unused bits.
+    creator_int_data.unused = '0;
+
+    // SoftwareBinding must match the value passed in SW. (Ideally, we would backdoor-load it into
+    // SW to remove the redundancy, but that's no immediate priority.)
+    // Values are currently stored under:
+    // ./sw/device/lib/testing/keymgr_dpe_testutils.h:kCreatorIntKeyParams
+    creator_int_data.SoftwareBinding = {
+        32'h47a1cf58, 32'he6d2093b, 32'h3f85b26d, 32'h91e47c0a,
+        32'h2d6b18f4, 32'hc70e5a93, 32'h8b2f41d6, 32'h5a3c9e17
+    };
+
+    // The field entropy is provided by the OTP.
+    creator_int_data.FieldEntropy = get_field_entropy();
+
+    return adv_data_t'(creator_int_data);
+  endfunction
+
+  // Collect data used as 'message' to derive the OwnerIntKey (boot stage 3).
   virtual function adv_data_t get_owner_int_data();
     adv_owner_int_data_t owner_int_data;
 
@@ -530,7 +619,7 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
     return adv_data_t'(owner_int_data);
   endfunction
 
-  // Collect data used as 'message' to derive the OwnerKey (boot stage 3).
+  // Collect data used as 'message' to derive the OwnerKey (boot stage 4).
   virtual function adv_data_t get_owner_data();
     adv_owner_data_t owner_data;
 
@@ -562,6 +651,26 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
 
     `uvm_info(`gfn, $sformatf("OwnerSeed:\n%s", key_str(flash_owner_seed)), UVM_LOW)
     return flash_owner_seed;
+  endfunction
+
+  // Read the field entropy at the input of the keymgr_dpe via backdoor. If the field entropy is
+  // not provisioned (any share is invalid) the keymgr_dpe falls back to the netlist constant.
+  virtual function key_t get_field_entropy();
+    keymgr_dpe_pkg::keymgr_dpe_field_entropy_t field_entropy;
+    key_t field_entropy_unmasked;
+
+    string path = $sformatf(
+        "tb.dut.top_earlgrey.earlgrey_pd_main.u_keymgr_dpe.field_entropy_i");
+    `DV_CHECK_FATAL(uvm_hdl_read(path, field_entropy))
+
+    if (field_entropy.share0_valid && field_entropy.share1_valid) begin
+      field_entropy_unmasked = field_entropy.share0 ^ field_entropy.share1;
+    end else begin
+      field_entropy_unmasked = top_earlgrey_rnd_cnst_pkg::RndCnstKeymgrDpeFieldEntropySeed;
+    end
+
+    `uvm_info(`gfn, $sformatf("FieldEntropy:\n%s", key_str(field_entropy_unmasked)), UVM_LOW)
+    return field_entropy_unmasked;
   endfunction
 
   // Read CreatorSeed from OTP via backdoor and descramble it.
