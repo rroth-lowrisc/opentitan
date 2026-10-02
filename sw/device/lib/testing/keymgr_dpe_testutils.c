@@ -65,7 +65,7 @@ status_t keymgr_dpe_testutils_startup(dif_keymgr_dpe_t *keymgr_dpe,
     TRY(keymgr_dpe_testutils_wait_for_operation_done(keymgr_dpe));
     TRY(keymgr_dpe_testutils_check_state(keymgr_dpe,
                                          kDifKeymgrDpeStateAvailable));
-    LOG_INFO("UDS is latched.");
+    LOG_INFO("Root key is latched.");
   }
   return OK_STATUS();
 }
@@ -358,14 +358,15 @@ status_t keymgr_dpe_testutils_startup(dif_keymgr_dpe_t *keymgr_dpe,
 
   // Advance to CreatorRootKey state.
   if (is_using_test_rom) {
-    // Verify keymgr_dpe state and load UDS into predefined hw slot
+    // Verify keymgr_dpe state and load the root key into predefined hw slot
     LOG_INFO("Using test_rom, setting inputs and advancing state...");
     TRY(keymgr_dpe_testutils_check_state(keymgr_dpe, kDifKeymgrDpeStateReset));
-    TRY(keymgr_dpe_testutils_initial_load_uds(keymgr_dpe, &kInitialParams));
+    TRY(keymgr_dpe_testutils_initial_load_root_key(keymgr_dpe,
+                                                   &kInitialParams));
     TRY(keymgr_dpe_testutils_check_state(keymgr_dpe,
                                          kDifKeymgrDpeStateAvailable));
     // DV sync message (keymgr_dpe_key_derivation_vseq)
-    LOG_INFO("Keymgr DPE loaded the UDS and entered Available state.");
+    LOG_INFO("Keymgr DPE loaded the root key and entered Available state.");
 
     // Generate the creator root key
     TRY(keymgr_dpe_testutils_advance_state(keymgr_dpe, &kCreatorRootKeyParams));
@@ -393,10 +394,10 @@ status_t keymgr_dpe_testutils_startup(dif_keymgr_dpe_t *keymgr_dpe,
  * call completes.
  */
 // TODO(#30665): Verify if the max key version needs to be written here too!
-// When loading the UDS the RTL fetches the max key version from the SW
+// When loading the root key the RTL fetches the max key version from the SW
 // register. Verify that the lock is released when the version register is
 // locked.
-status_t keymgr_dpe_testutils_initial_load_uds(
+status_t keymgr_dpe_testutils_initial_load_root_key(
     const dif_keymgr_dpe_t *keymgr_dpe,
     const dif_keymgr_dpe_advance_params_t *params) {
   TRY(dif_keymgr_dpe_initialize(keymgr_dpe, params->slot_dst_sel));

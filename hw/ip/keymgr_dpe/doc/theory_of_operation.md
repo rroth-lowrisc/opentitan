@@ -68,7 +68,7 @@ Both registers are replicated `NumMaxHwSlot` times but only indices below `NumIn
 
 The key manager working state represents the current working state of the key manager and it is decoupled from the DICE hierarchy.
 From SW point of view, keymgr_dpe's FSM can only be in the following states: {`Reset`, `Available`, `Disabled`, `Invalid`}.
-After reset, keymgr_dpe remains in `Reset` state until the first advance call that latches the OTP creator root key, which is also referred to as Unique Device Secret (UDS).
+After reset, keymgr_dpe remains in `Reset` state until the first advance call that latches the OTP creator root key.
 After this advance call, the FSM remains in `Available` state, and it can serve the advance/generate/erase requests.
 Unless keymgr_dpe encounters a fault or is explicitly disabled, the FSM remains in `Available` state.
 Invalid states such as {`Reset`, `Invalid`}, on the other hand, are used to denote out-of-operation states.
@@ -83,7 +83,7 @@ Until the initial advance is invoked and keymgr_DPE reaches to `Available` state
 
 During `Available`, keymgr_DPE accepts further advance and key generation requests.
 When transitioning from `Reset` to `Available`, as a SCA counter-measure, random values obtained from the entropy source are used to populate the key slot first in a manner that both shares have the same random mask.
-Then the root key is XORed on top of this randomness, in order to have fresh randomness for UDS at every power cycle.
+Then the root key is XORed on top of this randomness, in order to have fresh randomness for the root key at every power cycle.
 During these transitions, keymgr_DPE's working state will be reported as `Reset`, until the latching is done and keymgr_DPE is ready to accept further commands.
 
 ### Disabled
@@ -126,10 +126,10 @@ More details about command interactions can be found in Programmers Guide.
 Advancing a keymgr_dpe slot (also referred to as _deriving a child_) uses multiple inputs.
 In particular, since there are multiple slots inside keymgr_dpe, source and destination parameters need to be passed to advance calls.
 
-The very first advance call only latches the OTP creator root key (UDS), therefore most of these registers are ignored during the first call.
+The very first advance call only latches the OTP creator root key, therefore most of these registers are ignored during the first call.
 The only relevant registers (or register fields) during the first advance call are: `CONTROL_SHADOWED.OPERATION`, `MAX_KEY_VER_SHADOWED`, `CONTROL_SHADOWED.SLOT_DST_SEL` and `START`.
 
-In particular, the destination slot for the UDS is chosen by SW, and there is no designated special slot for it.
+In particular, the destination slot for the root key is chosen by SW, and there is no designated special slot for it.
 Moreover, since the destination slot for this first advance call has no parent, its `boot_stage` value is not incremented but initialized to `0`.
 This initial latching can be repeated with the _Load Root Key_ operation unless locked with the `LOAD_ROOT_KEY_LOCK` register.
 If the OTP creator root key is not valid during the latching cycle, keymgr_dpe moves to `Invalid`state.
@@ -160,7 +160,7 @@ At the end of a successful advance operation, the following updates are made for
 * `valid` bit is set to 1.
 * `key_policy` is updated with `SLOT_POLICY`.
 * `max_key_version` is updated with `MAX_KEY_VERSION`.
-* `boot_stage` is set to the parent’s `boot_stage + 1`, except for the initial `Advance` call that initializes the UDS slot `boot_stage` value to `0`.
+* `boot_stage` is set to the parent’s `boot_stage + 1`, except for the initial `Advance` call that initializes the root key slot `boot_stage` value to `0`.
 * `key` is updated from the key received from KMAC.
 
 Whether the same slot can be chosen both as the source and the destination during advance call depends on `retain_parent` policy bit.
@@ -170,7 +170,7 @@ In other words, `retain_parent = false` forces SW to request in-place update, wh
 
 When there is no fault and the enable signal is active by life cycle controller, the validity of an advance operation is defined as follows:
 
-* If keymgr_dpe is in `Reset` state (i.e. the first advance call that latches UDS), then an advance operation is valid if:
+* If keymgr_dpe is in `Reset` state (i.e. the first advance call that latches the root key), then an advance operation is valid if:
   * The OTP creator root key is valid during the clock cycle keymgr_DPE tries to latch it.
 * If keymgr_dpe is in `Available` state, then an advance operation is valid if all of the following conditions are satisfied (AND clause):
   * Keymgr_DPE is in `Available` state.
@@ -202,7 +202,7 @@ KDF used for key generation calls is the same KMAC instance used in advance call
 The only difference is that the input messages are 0-padded to another length parameter, `GenDataWidth`.
 
 Key generation request is valid if all of the following conditions are satisfied (AND clause):
-* The internal FSM is in `Available` state. Namely, keymgr_dpe rejects key generation requests during `Invalid`/`Disabled` as they are inactive states, and during `Reset` for not having latched the UDS key yet.
+* The internal FSM is in `Available` state. Namely, keymgr_dpe rejects key generation requests during `Invalid`/`Disabled` as they are inactive states, and during `Reset` for not having latched the root key yet.
 * The selected source slot is valid.
 * `DEST_SEL` contains one of the five valid sideload destinations (None, AES, KMAC, OTBN, HMAC).
 

@@ -10,7 +10,7 @@
 //   seeds in NVM. And then reboot the chip.
 // - In the SV sequence, backdoor read Device ID and ROM digest through CSRs.
 // - For HardwareRevisionSecret, use the constant values in design.
-// - Configure the keymgr dpe and derive the `CreatorRootKey` from the UDS.
+// - Configure the keymgr dpe and derive the `CreatorRootKey` from the OTP root key.
 // - Verify the correctness of the generated `CreatorRootKey`.
 // - Generate keys for OTBN / AES / KMAC / SW and verify each of the generated keys.
 // - Derive the `OwnerIntKey` from `CreatorRootKey`.
@@ -115,15 +115,15 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
 
   // This body mainly controls the setup of the keymgr_dpe and kmac
   virtual task body();
-    key_shares_t uds, creator_key;
-    int uds_slot_idx, creator_key_slot_idx;
+    key_shares_t root_key, creator_key;
+    int root_key_slot_idx, creator_key_slot_idx;
 
     super.body();
 
-    // Wait for keymgr_dpe to become available by loading the UDS into a slot
+    // Wait for keymgr_dpe to become available by loading the root key into a slot
     // with boot stage set to 0.
     cfg.sw_logger_vif.wait_for_log_message(
-        "Keymgr DPE loaded the UDS and entered Available state.",
+        "Keymgr DPE loaded the root key and entered Available state.",
         20_000_000 /* 20 ms, longer than default because OT needs to come out of SW reset*/,
         "keymgr_dpe to derive CreatorRootKey"
     );
@@ -135,33 +135,34 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
       key_shares_t otp_root_key = get_otp_root_key();
       bit [keymgr_dpe_pkg::KeyWidth-1:0] stage_key_unmasked;
       bit [keymgr_dpe_pkg::KeyWidth-1:0] otp_root_key_unmasked;
-      uds_slot_idx = 0;
+      root_key_slot_idx = 0;
       for (int i = 0; i < num_hw_slots; i++) begin
         keymgr_dpe_pkg::keymgr_dpe_slot_t slot = get_key_slot(i);
         if (slot.valid) begin
           `DV_CHECK_EQ(valid_found, 1'b0, "Expecting only one valid key slot")
           valid_found = 1'b1;
           `DV_CHECK_EQ(slot.boot_stage, 'd0, "Expecting boot stage to be 0")
-          uds = slot.key;
-          uds_slot_idx = i;
+          root_key = slot.key;
+          root_key_slot_idx = i;
         end
       end
       // The key from the slot is scrambled with random entropy! Therefore it is necessary to xor
       // both shares together for both keys and compare this result!
-      stage_key_unmasked = get_unmasked_key(uds);
+      stage_key_unmasked = get_unmasked_key(root_key);
       otp_root_key_unmasked = get_unmasked_key(otp_root_key);
-      // Compare the UDS with its ground truth
+      // Compare the root key with its ground truth
       `DV_CHECK_EQ(valid_found, 1'b1, "Expecting one valid key slot")
       `DV_CHECK_EQ(stage_key_unmasked, otp_root_key_unmasked,
-                   $sformatf("Expecting UDS in dpe context to be equal to the UDS from OTP"));
+                   "Expecting the root key in dpe context to be equal to the root key from OTP");
     end
-    `uvm_info(`gfn, $sformatf("UDS is in slot %0d:\n%s", uds_slot_idx,
-        key_shares_str(uds)), UVM_LOW)
+    `uvm_info(`gfn, $sformatf("Root key is in slot %0d:\n%s", root_key_slot_idx,
+        key_shares_str(root_key)), UVM_LOW)
 
     // Wait for keymgr_dpe to derive the CreatorRootKey and thus have consumed the associated
     // values (creator seed etc.).
-    // Afterwards the UDS is manually removed from the keymgr dpe.
-    cfg.sw_logger_vif.wait_for_log_message("KeymgrDpe derived CreatorRootKey and removed the UDS");
+    // Afterwards the root key is manually removed from the keymgr dpe.
+    cfg.sw_logger_vif.wait_for_log_message(
+        "KeymgrDpe derived CreatorRootKey and removed the root key");
     // At this point, exactly one key slot should contain the boot stage 1 key. Verify that this
     // holds.
     begin
@@ -181,7 +182,7 @@ class chip_sw_keymgr_dpe_key_derivation_vseq extends chip_sw_base_vseq;
         key_shares_str(creator_key)), UVM_LOW)
 
     // Verify that the key was derived from the creator data as expected.
-    check_derived_key(uds, get_creator_data(), creator_key);
+    check_derived_key(root_key, get_creator_data(), creator_key);
 
     // Run the test-sequence (Can be overwritten by additional tests)
     run_test_sequence(creator_key);

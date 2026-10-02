@@ -209,7 +209,7 @@ static rom_error_t keymgr_dpe_is_idle(void) {
  *
  * Sets the max key version, software binding, and policy for the new
  * context, then starts the advance operation. Used by every advance call
- * except the initial UDS advance out of reset, whose starting state and
+ * except the initial root key advance out of reset, whose starting state and
  * register setup differ.
  *
  * @param exl_sw_binding whether the software binding should be used
@@ -447,22 +447,22 @@ rom_error_t sc_keymgr_dpe_advance_dpe_context(
 }
 
 /**
- * Write into the lock register for the UDS.
+ * Write into the lock register for the root key.
  */
-void sc_keymgr_dpe_lock_uds(void) {
+void sc_keymgr_dpe_lock_root_key(void) {
   abs_mmio_write32(
       sc_keymgr_dpe_base() + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
       1 << KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_BIT);
 }
 
 /**
- * Load the UDS into the provided destination slot.
+ * Load the root key into the provided destination slot.
  */
 // TODO(#30667): Verify if the max key version needs to be written here too!
-//              When loading the UDS the RTL fetches the max key version from
-//              the SW register. Verify that the lock is released when the
+//              When loading the root key the RTL fetches the max key version
+//              from the SW register. Verify that the lock is released when the
 //              version register is locked.
-rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot) {
+rom_error_t sc_keymgr_dpe_load_root_key(uint32_t sel_dst_slot) {
   // Set the control register entries
   sc_keymgr_dpe_control_reg_set(
       kScKeymgrDPEUseAdditionalHwBinding,
@@ -475,14 +475,15 @@ rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot) {
 }
 
 /**
- * Executes the first advance call to load the UDS in the selected slot and
+ * Executes the first advance call to load the root key in the selected slot and
  * sets the keymgr_dpe FSM to available.
  */
 // TODO(#30667): Verify if the max key version needs to be written here too!
-//              When loading the UDS the RTL fetches the max key version from
-//              the SW register. Verify that the lock is released when the
+//              When loading the root key the RTL fetches the max key version
+//              from the SW register. Verify that the lock is released when the
 //              version register is locked.
-rom_error_t sc_keymgr_dpe_advance_initial(const uint32_t sel_dst_slot_uds) {
+rom_error_t sc_keymgr_dpe_advance_initial(
+    const uint32_t sel_dst_slot_root_key) {
   // Verify the reset state
   HARDENED_RETURN_IF_ERROR(expected_state_check(kScKeymgrDPEStateReset));
 
@@ -490,12 +491,13 @@ rom_error_t sc_keymgr_dpe_advance_initial(const uint32_t sel_dst_slot_uds) {
   sc_keymgr_dpe_control_reg_set(
       kScKeymgrDPEUseAdditionalHwBinding,
       KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_ADVANCE,
-      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0, sel_dst_slot_uds);
+      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0,
+      sel_dst_slot_root_key);
 
   // Start the advance operation
   sc_keymgr_dpe_start_operation();
 
-  // Wait until UDS is loaded
+  // Wait until root key is loaded
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_wait_until_done());
 
   // Verify the available state
@@ -504,7 +506,7 @@ rom_error_t sc_keymgr_dpe_advance_initial(const uint32_t sel_dst_slot_uds) {
 
 /**
  * Sets the binding registers / key version registers and advances the
- * UDS into the creator keys (sealing and attestation).
+ * root key into the creator keys (sealing and attestation).
  */
 rom_error_t sc_keymgr_dpe_advance_creator(
     sc_keymgr_dpe_advance_data_t adv_data_sealing,
@@ -522,9 +524,9 @@ rom_error_t sc_keymgr_dpe_advance_creator(
   sc_keymgr_dpe_advance(kScKeymgrDPEUseAdditionalHwBinding, adv_data_sealing);
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_wait_until_done());
 
-  // Load the UDS into the attestation source slot
+  // Load the root key into the attestation source slot
   HARDENED_RETURN_IF_ERROR(
-      sc_keymgr_dpe_load_uds(adv_data_attestation.sel_src_slot));
+      sc_keymgr_dpe_load_root_key(adv_data_attestation.sel_src_slot));
 
   // Advance the attestation key chain
   sc_keymgr_dpe_advance(kScKeymgrDPEUseAdditionalHwBinding,

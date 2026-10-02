@@ -15,15 +15,14 @@
 #include "sw/device/lib/dif/dif_keymgr_dpe.h"
 
 /**
- * Locks OTP, restarts and initializes keymgr_dpe with UDS (a.k.a. the OTP
- * root key).
+ * Locks OTP, restarts and initializes keymgr_dpe with the OTP root key.
  *
  * This procedure essentially gets the keymgr_dpe into the stage where it
  * can be used for tests. An example is given below:
  *
  * ```c
  * void test_main(void) {
- *   // The following sets up keymgr_dpe and asks it to latch UDS.
+ *   // The following sets up keymgr_dpe and asks it to latch the root key.
  *   dif_keymgr_dpe_t keymgr_dpe;
  *   keymgr_dpe_testutils_startup(&keymgr_dpe);
  *
@@ -125,7 +124,7 @@ static const dif_keymgr_dpe_generate_params_t kKeyVersionedParams = {
 
 /**
  * Parameter list for the initial advancement. The slot_dst_sel determines in
- * which slot the UDS is loaded. Any other parameters are discarded.
+ * which slot the root key is loaded. Any other parameters are discarded.
  */
 static const dif_keymgr_dpe_advance_params_t kInitialParams = {
     .binding_value = {0, 0, 0, 0, 0, 0, 0, 0},
@@ -135,7 +134,7 @@ static const dif_keymgr_dpe_advance_params_t kInitialParams = {
     .slot_policy = 0};
 
 /**
- * Parameters for advancing: UDS > creator root key
+ * Parameters for advancing: root key > creator root key
  */
 static const dif_keymgr_dpe_advance_params_t kCreatorRootKeyParams = {
     .binding_value = {0xdc96c23d, 0xaf36e268, 0xcb68ff71, 0xe92f76e2,
@@ -300,19 +299,19 @@ status_t keymgr_dpe_testutils_advance_state(
     const dif_keymgr_dpe_advance_params_t *params);
 
 /**
- * Loads the UDS into the keymgr dpe and move the state from `Reset`
+ * Loads the root key into the keymgr dpe and move the state from `Reset`
  * to `Available`.
  *
- * The first advance call is automatically mapped to latch the UDS into the
+ * The first advance call is automatically mapped to latch the root key into the
  * designated destination slot rather than advancing any DPE context.
  * Therefore most registers used in the regular advance call are ignored
  * during initialization.
  *
  * @param keymgr_dpe A key manager dpe handle.
- * @param params The .slot_dst_sel subfield determines the slot for the UDS
+ * @param params The .slot_dst_sel subfield determines the slot for the root key
  */
 OT_WARN_UNUSED_RESULT
-status_t keymgr_dpe_testutils_initial_load_uds(
+status_t keymgr_dpe_testutils_initial_load_root_key(
     const dif_keymgr_dpe_t *keymgr_dpe,
     const dif_keymgr_dpe_advance_params_t *params);
 

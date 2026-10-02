@@ -605,8 +605,8 @@ static status_t personalize_gen_dice_certificates(ujson_t *uj) {
   TRY(entropy_complex_init(kHardenedBoolFalse));
   TRY(kmac_keymgr_configure());
 
-  // The ROM has already loaded the UDS into `kKeymgrDPESealSlot` and advanced
-  // both key chains to the CreatorRootKey stage.
+  // The ROM has already loaded the root key into `kKeymgrDPESealSlot` and
+  // advanced both key chains to the CreatorRootKey stage.
   TRY(sc_keymgr_dpe_state_check(kScKeymgrDPEStateAvailable));
 
   // Measure OTP partitions.

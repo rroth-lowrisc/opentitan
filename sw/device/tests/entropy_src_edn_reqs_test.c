@@ -145,14 +145,14 @@ static void keymgr_dpe_test(const dif_keymgr_dpe_t *keymgr_dpe) {
       // Verify the keymgr dpe is in the reset state
       CHECK_STATUS_OK(keymgr_dpe_testutils_check_state(
           keymgr_dpe, kDifKeymgrDpeStateReset));
-      // Initialize the keymgr dpe with the UDS
-      CHECK_STATUS_OK(
-          keymgr_dpe_testutils_initial_load_uds(keymgr_dpe, &kInitialParams));
-      // Verify the keymgr dpe loaded the UDS
+      // Initialize the keymgr dpe with the root key
+      CHECK_STATUS_OK(keymgr_dpe_testutils_initial_load_root_key(
+          keymgr_dpe, &kInitialParams));
+      // Verify the keymgr dpe loaded the root key
       CHECK_STATUS_OK(keymgr_dpe_testutils_check_state(
           keymgr_dpe, kDifKeymgrDpeStateAvailable));
 
-      // Derive the first DPE context from the UDS
+      // Derive the first DPE context from the root key
       CHECK_STATUS_OK(keymgr_dpe_testutils_advance_state(
           keymgr_dpe, &kCreatorRootKeyParams));
       // TODO(#30759): Verify the kCreatorRootKeyParams.slot_dst_sel

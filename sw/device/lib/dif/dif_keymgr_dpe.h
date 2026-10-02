@@ -255,7 +255,7 @@ typedef uint8_t dif_keymgr_dpe_status_codes_t;
  * `dif_keymgr_dpe_advance_state()`.
  *
  * @param keymgr_dpe A key manager handle.
- * @param slot_dst_sel Target slot used to latch the UDS key.
+ * @param slot_dst_sel Target slot used to latch the root key.
  * @return The result of the operation.
  */
 dif_result_t dif_keymgr_dpe_initialize(const dif_keymgr_dpe_t *keymgr_dpe,

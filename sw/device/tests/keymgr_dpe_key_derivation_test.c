@@ -417,7 +417,7 @@ bool test_main(void) {
   CHECK_STATUS_OK(keymgr_dpe_testutils_check_state(
       &keymgr_dpe, kDifKeymgrDpeStateAvailable));
   // DV SYNC MESSAGE
-  LOG_INFO("KeymgrDpe derived CreatorRootKey and removed the UDS");
+  LOG_INFO("KeymgrDpe derived CreatorRootKey and removed the root key");
 
   // run the specific test sequence with CreatorRootKey
   return key_derivation_test();

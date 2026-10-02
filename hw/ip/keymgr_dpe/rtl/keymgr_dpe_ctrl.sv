@@ -326,7 +326,7 @@ module keymgr_dpe_ctrl
       SlotDestRandomize: begin
         key_slots_d[slot_dst_sel_i] = '0;
         for (int j = 0; j < Shares; j++) begin
-          // Initialize pre-UDS value with equal randomness for SCA resistance
+          // Initialize pre-root key value with equal randomness for SCA resistance
           key_slots_d[slot_dst_sel_i].key[j][cnt*EntropyWidth +: EntropyWidth] = entropy_i[0];
         end
       end
@@ -340,7 +340,7 @@ module keymgr_dpe_ctrl
         key_slots_d[slot_dst_sel_i].key[0] ^= root_key_i.key[0];
         key_slots_d[slot_dst_sel_i].key[1] ^= root_key_i.key[1];
         key_slots_d[slot_dst_sel_i].max_key_version = max_key_version_i;
-        key_slots_d[slot_dst_sel_i].key_policy = DEFAULT_UDS_POLICY;
+        key_slots_d[slot_dst_sel_i].key_policy = DEFAULT_ROOT_KEY_POLICY;
       end
 
       // `SlotLoadFromKmac` is used at the end of a successful advance operation, so that the
@@ -466,7 +466,7 @@ module keymgr_dpe_ctrl
     // Request PRNG reseeding.
     prng_reseed_req_o = 1'b0;
 
-    // signal the cycle that loads UDS
+    // signal the cycle that loads the root key
     init_o = 1'b0;
 
     // if state is ever faulted, hold on to this indication

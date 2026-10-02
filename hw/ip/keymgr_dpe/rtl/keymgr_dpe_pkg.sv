@@ -66,7 +66,7 @@ package keymgr_dpe_pkg;
     logic allow_child;
   } keymgr_dpe_policy_t;
 
-  localparam keymgr_dpe_policy_t DEFAULT_UDS_POLICY = '{
+  localparam keymgr_dpe_policy_t DEFAULT_ROOT_KEY_POLICY = '{
     retain_parent : 1'b0,
     exportable    : 1'b0,
     allow_child   : 1'b1

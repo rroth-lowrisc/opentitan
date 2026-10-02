@@ -14,10 +14,10 @@ The first advance call only latches the OTP creator root key, therefore most reg
 
 Keymgr_DPE is initialized by configuring the following CSR:
 *  Set `CONTROL_SHADOWED.OPERATION` to `Advance`.
-*  Set `CONTROL_SHADOWED.SLOT_DST_SEL` to the destination slot to which UDS should be latched.
+*  Set `CONTROL_SHADOWED.SLOT_DST_SEL` to the destination slot to which the root key should be latched.
 *  Set `START` to initiate the operation.
 
-At the end of the successful first advance call, the UDS is latched into the specified destination slot.
+At the end of the successful first advance call, the root key is latched into the specified destination slot.
 
 ## Advance
 

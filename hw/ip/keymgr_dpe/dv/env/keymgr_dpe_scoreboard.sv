@@ -96,12 +96,12 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
   bit                                is_kmac_rsp_err;
   bit                                is_kmac_invalid_data;
   bit                                is_sw_share_corrupted;
-  // Indicates if the UDS was fetched by the keymgr_dpe for the first time.
-  // The UDS needs to be xored with randomness to counter SCA, however the
+  // Indicates if the root key was fetched by the keymgr_dpe for the first time.
+  // The root key needs to be xored with randomness to counter SCA, however the
   // current dv environment cannot replicate this randomness. As a workaround
-  // the generated value (UDS xored with randomness) is loaded by a backdoor
+  // the generated value (root key xored with randomness) is loaded by a backdoor
   // directly from the DUT.
-  bit                                load_uds_with_randomness;
+  bit                                load_root_key_with_randomness;
 
   // HW internal key, used for OP in current state
   keymgr_dpe_env_pkg::keymgr_dpe_key_slot_t current_key_slot;
@@ -1070,15 +1070,15 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     current_internal_key[current_key_slot.dst_slot].valid = 1;
     current_internal_key[current_key_slot.dst_slot].boot_stage = keymgr_dpe_pkg::BootStageCreator;
     current_internal_key[current_key_slot.dst_slot].max_key_version = max_key_version;
-    // This call loads the "true" UDS without the randomness present in the
+    // This call loads the "true" root key without the randomness present in the
     // HW slot. The problem is that when this function is invoked (when writing into the start
     // register for the first time) the randomness in the HW slot is not yet generated.
     // The current workaround is to backdoor load the randomness from the hardware. This is done on
-    // the first advance call in the available state as the src_slot has the UDS loaded.
+    // the first advance call in the available state as the src_slot has the root key loaded.
     // TODO(#30758): Remove this backdoor load
     current_internal_key[current_key_slot.dst_slot].key = otp_key;
     current_internal_key[current_key_slot.dst_slot].key_policy =
-        keymgr_dpe_pkg::DEFAULT_UDS_POLICY;
+        keymgr_dpe_pkg::DEFAULT_ROOT_KEY_POLICY;
     `uvm_info(`gfn,
       $sformatf("latch_otp_key: key %p",
       current_internal_key[current_key_slot.dst_slot]
@@ -1090,12 +1090,12 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     );
   endfunction
 
-  // Directly access the slot which holds the UDS with the xored randmoness
+  // Directly access the slot which holds the root key with the xored randmoness
   // Otherwise the scorebord would need to manually replicate the randomness
   // generation.
   // TODO(#30758): Remove this backdoor load
-  virtual function void backdoor_load_uds(int slot);
-    `uvm_info(`gfn, "Load UDS with randomness via backdoor", UVM_MEDIUM)
+  virtual function void backdoor_load_root_key(int slot);
+    `uvm_info(`gfn, "Load root key with randomness via backdoor", UVM_MEDIUM)
     current_internal_key[slot].key = cfg.keymgr_dpe_ctrl_vif.get_key_of_slot(slot);
   endfunction
 
@@ -1224,12 +1224,12 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
                   "src_slot valid == 0 err"}, op.name, current_state.name), UVM_MEDIUM)
               return 1;
             end
-            // Workaround to load the UDS with the xored randomness into the
+            // Workaround to load the root key with the xored randomness into the
             // correct internal slot. The first (successful) advance call will
-            // use the UDS per default.
-            if (load_uds_with_randomness == 1'b0) begin
-              load_uds_with_randomness = 1'b1;
-              backdoor_load_uds(current_key_slot.src_slot);
+            // use the root key per default.
+            if (load_root_key_with_randomness == 1'b0) begin
+              load_root_key_with_randomness = 1'b1;
+              backdoor_load_root_key(current_key_slot.src_slot);
             end
             return 0;
           end
@@ -1732,7 +1732,7 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
     is_kmac_rsp_err       = 0;
     is_kmac_invalid_data  = 0;
     is_sw_share_corrupted = 0;
-    load_uds_with_randomness = 0;
+    load_root_key_with_randomness = 0;
     foreach (current_internal_key[slot]) begin
       current_internal_key[slot].key = '0;
       current_internal_key[slot].key_policy = '0;

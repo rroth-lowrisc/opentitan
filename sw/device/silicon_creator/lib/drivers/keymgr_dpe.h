@@ -48,7 +48,7 @@ typedef enum sc_keymgr_dpe_state {
 /**
  * Option to exclude the hw bindings values when deriving a DPE context
  * (only applicable when deriving either a first, second or third generation
- * DPE context in respect to the UDS).
+ * DPE context in respect to the root key).
  */
 typedef enum sc_keymgr_dpe_sw_binding {
   kScKeymgrDPEUseAdditionalHwBinding = 0,
@@ -375,54 +375,53 @@ rom_error_t sc_keymgr_dpe_advance_dpe_context(
     sc_keymgr_dpe_advance_data_t adv_data);
 
 /**
- * Locks the load uds operation until the next reset.
+ * Locks the load root key operation until the next reset.
  *
- * When this function is called then the function "sc_keymgr_dpe_load_uds" will
- * generate an error as the uds is locked. This lock can only be released by
- * resetting the device.
- *
+ * When this function is called then the function "sc_keymgr_dpe_load_root_key"
+ * will generate an error as the root secret is locked. This lock can only be
+ * released by resetting the device.
  */
-void sc_keymgr_dpe_lock_uds(void);
+void sc_keymgr_dpe_lock_root_key(void);
 
 /**
- * Load the UDS into an empty hw slot.
+ * Load the root key into an empty hw slot.
  *
- * Load the UDS into the selected hw slot. If the selected hw slot is not
+ * Load the root key into the selected hw slot. If the selected hw slot is not
  * empty then the keymgr_dpe will throw an error.
  *
- * @param sel_dst_slot empty destination slot for the UDS.
+ * @param sel_dst_slot empty destination slot for the root key.
  * @return `kErrorOk`
  */
 OT_WARN_UNUSED_RESULT
-rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot);
+rom_error_t sc_keymgr_dpe_load_root_key(uint32_t sel_dst_slot);
 
 /**
- * Executes the first advance call to load the UDS in the selected slot and
+ * Executes the first advance call to load the root key in the selected slot and
  * sets the keymgr_dpe FSM to available.
  *
  * Precondition: keymgr_dpe has to be in the state `kScKeymgrDPEStateReset`
  *
- * @param sel_dst_slot DPE context slot for the UDS.
+ * @param sel_dst_slot DPE context slot for the root key.
  * @return The result of the advance call.
  */
 OT_WARN_UNUSED_RESULT
-rom_error_t sc_keymgr_dpe_advance_initial(const uint32_t sel_dst_slot_uds);
+rom_error_t sc_keymgr_dpe_advance_initial(const uint32_t sel_dst_slot_root_key);
 
 /**
  * Sets the binding registers / key version registers and advances the
- * UDS to the creator keys (sealing and attestation).
+ * root key to the creator keys (sealing and attestation).
  *
- * First the sealing key is generated from the preloaded UDS while the UDS
- * is manually loaded a second time to generate the attestation key.
+ * First the sealing key is generated from the preloaded root key while the root
+ * key is manually loaded a second time to generate the attestation key.
  * Additionally, the retain parent policy bit must be cleared to avoid leaving
  * the creator keys existing beyond its designated boot stage. This
  * function blocks until the advance operation was successfully.
  *
  * Precondition: keymgr_dpe has to be in the state `kScKeymgrDPEStateAvailable`
  *
- * @param adv_data_sealing All required data to advance the UDS to the
+ * @param adv_data_sealing All required data to advance the root key to the
  * sealing owner key.
- * @param adv_data_attestation All required data to advance the UDS to the
+ * @param adv_data_attestation All required data to advance the root key to the
  * attestation owner key.
  * @return The result of the advance call.
  */

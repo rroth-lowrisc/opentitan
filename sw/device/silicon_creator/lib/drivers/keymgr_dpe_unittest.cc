@@ -146,9 +146,9 @@ class KeymgrDpeTest : public rom_test::RomTest {
   }
 
   /**
-   * Expects a `sc_keymgr_dpe_load_uds()` sequence.
+   * Expects a `sc_keymgr_dpe_load_root_key()` sequence.
    */
-  void ExpectLoadUds(uint32_t dst_slot) {
+  void ExpectLoadRootKey(uint32_t dst_slot) {
     ExpectControlRegSet(
         /*sw_binding_only=*/false,
         KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_ROOT_KEY,
@@ -453,31 +453,33 @@ TEST_F(KeymgrDpeTest, AdvanceDpeContext) {
   EXPECT_EQ(sc_keymgr_dpe_advance_dpe_context(adv_data), kErrorOk);
 }
 
-TEST_F(KeymgrDpeTest, LockUds) {
+TEST_F(KeymgrDpeTest, LockRootKey) {
   EXPECT_ABS_WRITE32(base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
                      {
                          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_BIT, true},
                      });
-  sc_keymgr_dpe_lock_uds();
+  sc_keymgr_dpe_lock_root_key();
 }
 
-TEST_F(KeymgrDpeTest, LoadUds) {
-  ExpectLoadUds(/*dst_slot=*/1);
-  EXPECT_EQ(sc_keymgr_dpe_load_uds(/*sel_dst_slot=*/1), kErrorOk);
+TEST_F(KeymgrDpeTest, LoadRootKey) {
+  ExpectLoadRootKey(/*dst_slot=*/1);
+  EXPECT_EQ(sc_keymgr_dpe_load_root_key(/*sel_dst_slot=*/1), kErrorOk);
 }
 
-TEST_F(KeymgrDpeTest, LoadUdsError) {
+TEST_F(KeymgrDpeTest, LoadRootKeyError) {
   ExpectControlRegSet(
       /*sw_binding_only=*/false,
       KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_ROOT_KEY,
       KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, /*src_slot=*/0,
       /*dst_slot=*/1);
   ExpectStartOperation();
-  // Loading the UDS into an occupied slot or while locked reports an error.
+  // Loading the root key into an occupied slot or while locked reports an
+  // error.
   ExpectWaitUntilDone(/*busy_cycles=*/1,
                       KEYMGR_DPE_OP_STATUS_STATUS_VALUE_DONE_ERROR);
   ExpectErrCodeReadClear(1 << KEYMGR_DPE_ERR_CODE_INVALID_OP_BIT);
-  EXPECT_EQ(sc_keymgr_dpe_load_uds(/*sel_dst_slot=*/1), kErrorKeymgrInternal);
+  EXPECT_EQ(sc_keymgr_dpe_load_root_key(/*sel_dst_slot=*/1),
+            kErrorKeymgrInternal);
 }
 
 TEST_F(KeymgrDpeTest, AdvanceInitial) {
@@ -495,7 +497,8 @@ TEST_F(KeymgrDpeTest, AdvanceInitial) {
                     KEYMGR_DPE_WORKING_STATE_STATE_VALUE_AVAILABLE,
                     /*err_code=*/0u);
 
-  EXPECT_EQ(sc_keymgr_dpe_advance_initial(/*sel_dst_slot_uds=*/1), kErrorOk);
+  EXPECT_EQ(sc_keymgr_dpe_advance_initial(/*sel_dst_slot_root_key=*/1),
+            kErrorOk);
 }
 
 TEST_F(KeymgrDpeTest, AdvanceInitialBadState) {
@@ -503,7 +506,7 @@ TEST_F(KeymgrDpeTest, AdvanceInitialBadState) {
   ExpectStatusCheck(KEYMGR_DPE_OP_STATUS_STATUS_VALUE_IDLE,
                     KEYMGR_DPE_WORKING_STATE_STATE_VALUE_AVAILABLE,
                     /*err_code=*/0u);
-  EXPECT_EQ(sc_keymgr_dpe_advance_initial(/*sel_dst_slot_uds=*/1),
+  EXPECT_EQ(sc_keymgr_dpe_advance_initial(/*sel_dst_slot_root_key=*/1),
             kErrorKeymgrInternal);
 }
 
@@ -526,12 +529,12 @@ TEST_F(KeymgrDpeTest, AdvanceCreator) {
   ExpectStatusCheck(KEYMGR_DPE_OP_STATUS_STATUS_VALUE_IDLE,
                     KEYMGR_DPE_WORKING_STATE_STATE_VALUE_AVAILABLE,
                     /*err_code=*/0u);
-  // Advance the sealing key chain from the preloaded UDS.
+  // Advance the sealing key chain from the preloaded creator root key.
   ExpectAdvanceWrapper(/*sw_binding_only=*/false, adv_data_sealing);
   ExpectWaitUntilDone(/*busy_cycles=*/1,
                       KEYMGR_DPE_OP_STATUS_STATUS_VALUE_DONE_SUCCESS);
-  // Reload the UDS into the attestation source slot.
-  ExpectLoadUds(adv_data_attestation.sel_src_slot);
+  // Reload the creator root key into the attestation source slot.
+  ExpectLoadRootKey(adv_data_attestation.sel_src_slot);
   // Advance the attestation key chain.
   ExpectAdvanceWrapper(/*sw_binding_only=*/false, adv_data_attestation);
   ExpectWaitUntilDone(/*busy_cycles=*/1,

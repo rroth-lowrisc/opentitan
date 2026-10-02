@@ -83,7 +83,7 @@ module keymgr_dpe
 );
 
   // Advance width calculation
-  // When deriving from the UDS the following data are consumed (Not ordered):
+  // When deriving from the root key the following data are consumed (Not ordered):
   //   - Software binding
   //   - Revision seed
   //   - OTP device ID
@@ -452,7 +452,7 @@ module keymgr_dpe
   ) u_sw_binding_regwen (
     .clk_i,
     .rst_ni,
-    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key (UDS)
+    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key
     .init_i(init),
     .en_i(lc_tx_test_true_strict(lc_keymgr_en[KeymgrDpeEnBinding])),
     .set_i(unlock_after_advance),
@@ -467,7 +467,7 @@ module keymgr_dpe
   ) u_slot_policy_regwen (
     .clk_i,
     .rst_ni,
-    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key (UDS)
+    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key
     .init_i(init),
     .en_i(lc_tx_test_true_strict(lc_keymgr_en[KeymgrDpeEnBinding])),
     .set_i(unlock_after_advance),
@@ -482,7 +482,7 @@ module keymgr_dpe
   ) u_max_key_ver_regwen (
     .clk_i,
     .rst_ni,
-    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key (UDS)
+    // `init` is raised only for 1 clock cycle, when FSM is loading OTP root key
     .init_i(init),
     .en_i(lc_tx_test_true_strict(lc_keymgr_en[KeymgrDpeEnBinding])),
     .set_i(unlock_after_advance),

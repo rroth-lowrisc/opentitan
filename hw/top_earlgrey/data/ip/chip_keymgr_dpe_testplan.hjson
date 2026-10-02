@@ -13,7 +13,7 @@
               seeds in NVM. And then reboot the chip.
             - In the SV sequence, backdoor read Device ID and ROM digest through CSRs.
             - For HardwareRevisionSecret, use the constant values in design.
-            - Configure the keymgr dpe and derive the `CreatorRootKey` from the UDS.
+            - Configure the keymgr dpe and derive the `CreatorRootKey` from the OTP root key.
             - Verify the correctness of the generated `CreatorRootKey`.
             - Generate keys for OTBN / AES / KMAC / SW and verify each of the generated keys.
             - Derive the `OwnerIntKey` from `CreatorRootKey`.

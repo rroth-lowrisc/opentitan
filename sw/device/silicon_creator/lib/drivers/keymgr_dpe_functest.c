@@ -124,10 +124,10 @@ rom_error_t keymgr_dpe_rom_test(void) {
           ->creator
           .reserved[ARRAYSIZE((retention_sram_t){0}.creator.reserved) - 1] ==
       TEST_ROM_IDENTIFIER) {
-    // Bring the keymgr dpe out of the reset state and load the UDS.
+    // Bring the keymgr dpe out of the reset state and load the root key.
     // After this operation the keymgr dpe is in the Available state.
     RETURN_IF_ERROR(sc_keymgr_dpe_advance_initial(kSealingSlot));
-    LOG_INFO("Keymgr DPE: UDS loaded");
+    LOG_INFO("Keymgr DPE: root key loaded");
 
     // Set the reseeding interval
     const uint16_t kEntropyReseedInterval = 0x1234;

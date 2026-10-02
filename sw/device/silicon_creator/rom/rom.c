@@ -659,12 +659,12 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       sc_keymgr_dpe_entropy_reseed_interval_set(UINT16_MAX);
       SEC_MMIO_WRITE_INCREMENT(kScKeymgrDPESecMmioReseedIntervalSet);
 
-      // Advance the keymgr dpe into the Available state and load the UDS in
-      // the selected DPE slot.
+      // Advance the keymgr dpe into the Available state and load the root key
+      // in the selected DPE slot.
       HARDENED_RETURN_IF_ERROR(
           sc_keymgr_dpe_advance_initial(kKeymgrDPESealSlot));
 
-      // TODO(#30759): Verify the kKeymgrDPESealSlot hold the UDS with boot
+      // TODO(#30759): Verify the kKeymgrDPESealSlot hold the root key with boot
       // stage set to BootStageCreator (0). (Note: Current bootstage + 1)
     } else {
       HARDENED_CHECK_EQ(secret2_locked, kHardenedBoolFalse);
@@ -689,7 +689,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
 
   // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
   // generation in the ROM section.
-  // Derive the CreatorRootKeys from the UDS
+  // Derive the CreatorRootKeys from the OTP root key
   if (launder32(keymgr_dpe_enabled) == kHardenedBoolTrue) {
     HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolTrue);
 
@@ -715,7 +715,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       };
 
       // Prepare the data to derive the attestation CreatorRootKey.
-      // Before deriving the CreatorRootKey the driver loads the UDS
+      // Before deriving the CreatorRootKey the driver loads the root key
       // into the attestation slot. Therefore, the source register
       // points to an empty HW slot.
       const sc_keymgr_dpe_advance_data_t adv_attestation_data = {

@@ -56,31 +56,31 @@ class keymgr_dpe_smoke_vseq extends keymgr_dpe_base_vseq;
     // unravel loop to both cover the retain_parent == 0/1 options
     `uvm_info(`gfn, "Key Manager DPE smoke - advance test", UVM_LOW)
 
-    // load the UDS into dst_slot with an advance call
+    // load the root key into dst_slot with an advance call
     dst_slot = 0;
     `uvm_info(`gfn,
-              $sformatf("Key Manager DPE smoke load UDS into dst_slot %d",
+              $sformatf("Key Manager DPE smoke load the root key into dst_slot %d",
                         dst_slot),
               UVM_LOW)
 
-    // The keymgr_dpe is advanced once (which loads the UDS into the predefined
+    // The keymgr_dpe is advanced once (which loads the root key into the predefined
     // slot - by the constraint: initial_slot_vals_c). Afterwards the
     // keymgr_dpe_base_vseq.sv generates between 5 and 10 random key generation
     // operations for the keymgr_dpe.
     keymgr_dpe_operations(.advance_state(1), .num_gen_op($urandom_range(5,10)),
                           .clr_output(1));
 
-    // Indicate the UDS is latched
+    // Indicate the root key is latched
     otp_latched = 1'b1;
 
     // If the default policy retain_parent is clear then we add an extra
-    // advance call to overwrite the UDS.
-    if (keymgr_dpe_pkg::DEFAULT_UDS_POLICY.retain_parent == 1'b0) begin
+    // advance call to overwrite the root key.
+    if (keymgr_dpe_pkg::DEFAULT_ROOT_KEY_POLICY.retain_parent == 1'b0) begin
       dst_slot = 0;
       src_slot = 0;
       // Indicate which stage is derived
       `uvm_info(`gfn,
-                $sformatf({"Key Manager DPE smoke overwrite UDS when retain_parent=0: ",
+                $sformatf({"Key Manager DPE smoke overwrite the root key when retain_parent=0: ",
                            "src_slot %d dst_slot %d"},
                            src_slot, dst_slot),
                 UVM_LOW)
