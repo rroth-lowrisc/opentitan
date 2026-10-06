@@ -39,6 +39,7 @@ typedef enum sc_keymgr_dpe_operation {
   kScKeymgrDPEOpsGenHwKey = 3,
   kScKeymgrDPEOpsDisable = 4,
   kScKeymgrDPEOpsLoadRootKey = 5,
+  kScKeymgrDPEOpsLoadSecondaryRootKey = 6,
 } sc_keymgr_dpe_operation_t;
 
 /**
@@ -496,6 +497,43 @@ rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot) {
   sc_keymgr_dpe_control_reg_set(
       kScKeymgrDPEUseAdditionalHwBinding,
       KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_ROOT_KEY,
+      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0, sel_dst_slot);
+
+  // Start the load operation
+  sc_keymgr_dpe_start_operation();
+  HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_wait_until_done());
+
+  // Verify the slot holds the UDS with the default max key version and policy.
+  return sc_keymgr_dpe_check_metadata(sel_dst_slot, kUdsMaxKeyVersion,
+                                      kScKeymgrDPEBootStageCreator,
+                                      &kUdsPolicy);
+}
+
+/**
+ * Write into the lock register for the secondary root key.
+ */
+void sc_keymgr_dpe_lock_secondary_root_key(void) {
+  abs_mmio_write32(
+      sc_keymgr_dpe_base() + KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_REG_OFFSET,
+      1 << KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_LOCK_BIT);
+}
+
+/**
+ * Load the secondary root key into the provided destination slot.
+ */
+rom_error_t sc_keymgr_dpe_load_secondary_root_key(uint32_t sel_dst_slot) {
+  // Verify the destination slot is empty.
+  sc_keymgr_dpe_metadata_t metadata;
+  HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_get_metadata(sel_dst_slot, &metadata));
+  if (launder32(metadata.valid) != kHardenedBoolFalse) {
+    return kErrorKeymgrInternal;
+  }
+  HARDENED_CHECK_EQ(metadata.valid, kHardenedBoolFalse);
+
+  // Set the control register entries
+  sc_keymgr_dpe_control_reg_set(
+      kScKeymgrDPEUseAdditionalHwBinding,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_SECONDARY_ROOT_KEY,
       KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0, sel_dst_slot);
 
   // Start the load operation
