@@ -35,6 +35,7 @@ typedef enum sc_keymgr_dpe_operation {
   kScKeymgrDPEOpsGenHwKey = 3,
   kScKeymgrDPEOpsDisable = 4,
   kScKeymgrDPEOpsLoadRootKey = 5,
+  kScKeymgrDPEOpsLoadSecondaryRootKey = 6,
 } sc_keymgr_dpe_operation_t;
 
 /**
@@ -467,6 +468,34 @@ rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot) {
   sc_keymgr_dpe_control_reg_set(
       kScKeymgrDPEUseAdditionalHwBinding,
       KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_ROOT_KEY,
+      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0, sel_dst_slot);
+
+  // Start the load operation
+  sc_keymgr_dpe_start_operation();
+  return sc_keymgr_dpe_wait_until_done();
+}
+
+/**
+ * Write into the lock register for the secondary root key.
+ */
+void sc_keymgr_dpe_lock_secondary_root_key(void) {
+  abs_mmio_write32(
+      sc_keymgr_dpe_base() + KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_REG_OFFSET,
+      1 << KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_LOCK_BIT);
+}
+
+/**
+ * Load the secondary root key into the provided destination slot.
+ */
+// TODO(#30667): Verify if the max key version needs to be written here too!
+//              When loading the secondary root key the RTL fetches the max key
+//              version from the SW register. Verify that the lock is released
+//              when the version register is locked.
+rom_error_t sc_keymgr_dpe_load_secondary_root_key(uint32_t sel_dst_slot) {
+  // Set the control register entries
+  sc_keymgr_dpe_control_reg_set(
+      kScKeymgrDPEUseAdditionalHwBinding,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_SECONDARY_ROOT_KEY,
       KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, 0, sel_dst_slot);
 
   // Start the load operation

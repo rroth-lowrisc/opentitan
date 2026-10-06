@@ -286,6 +286,73 @@ dif_result_t dif_keymgr_dpe_erase_slot(
   return kDifOk;
 }
 
+/**
+ * Starts a load (secondary) root key operation into the given slot.
+ */
+static dif_result_t start_load_root_key(const dif_keymgr_dpe_t *keymgr_dpe,
+                                        uint32_t slot_dst_sel,
+                                        uint32_t operation) {
+  if (keymgr_dpe == NULL) {
+    return kDifBadArg;
+  }
+
+  if (!is_ready(keymgr_dpe)) {
+    return kDifLocked;
+  }
+
+  uint32_t reg_control = bitfield_field32_write(
+      KEYMGR_DPE_CONTROL_SHADOWED_REG_RESVAL,
+      KEYMGR_DPE_CONTROL_SHADOWED_SLOT_DST_SEL_FIELD, slot_dst_sel);
+  reg_control = bitfield_field32_write(
+      reg_control, KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_FIELD, operation);
+  mmio_region_write32_shadowed(keymgr_dpe->base_addr,
+                               KEYMGR_DPE_CONTROL_SHADOWED_REG_OFFSET,
+                               reg_control);
+  mmio_region_write32(keymgr_dpe->base_addr, KEYMGR_DPE_START_REG_OFFSET,
+                      1 << KEYMGR_DPE_START_EN_BIT);
+
+  return kDifOk;
+}
+
+dif_result_t dif_keymgr_dpe_load_root_key(const dif_keymgr_dpe_t *keymgr_dpe,
+                                          uint32_t slot_dst_sel) {
+  return start_load_root_key(
+      keymgr_dpe, slot_dst_sel,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_ROOT_KEY);
+}
+
+dif_result_t dif_keymgr_dpe_load_secondary_root_key(
+    const dif_keymgr_dpe_t *keymgr_dpe, uint32_t slot_dst_sel) {
+  return start_load_root_key(
+      keymgr_dpe, slot_dst_sel,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_SECONDARY_ROOT_KEY);
+}
+
+dif_result_t dif_keymgr_dpe_lock_root_key(const dif_keymgr_dpe_t *keymgr_dpe) {
+  if (keymgr_dpe == NULL) {
+    return kDifBadArg;
+  }
+
+  mmio_region_write32(keymgr_dpe->base_addr,
+                      KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+                      1 << KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_BIT);
+
+  return kDifOk;
+}
+
+dif_result_t dif_keymgr_dpe_lock_secondary_root_key(
+    const dif_keymgr_dpe_t *keymgr_dpe) {
+  if (keymgr_dpe == NULL) {
+    return kDifBadArg;
+  }
+
+  mmio_region_write32(keymgr_dpe->base_addr,
+                      KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_REG_OFFSET,
+                      1 << KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_LOCK_BIT);
+
+  return kDifOk;
+}
+
 dif_result_t dif_keymgr_dpe_disable(const dif_keymgr_dpe_t *keymgr_dpe) {
   if (keymgr_dpe == NULL) {
     return kDifBadArg;

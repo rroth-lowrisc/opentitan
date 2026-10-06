@@ -286,6 +286,53 @@ dif_result_t dif_keymgr_dpe_erase_slot(
     const dif_keymgr_dpe_erase_params_t *params);
 
 /**
+ * Loads the creator root key into an empty keymgr_dpe slot.
+ *
+ * The operation is rejected if the destination slot is not empty or if it was
+ * locked with `dif_keymgr_dpe_lock_root_key()`.
+ *
+ * @param keymgr_dpe A key manager handle.
+ * @param slot_dst_sel Empty target slot used to store the root key.
+ * @return The result of the operation.
+ */
+OT_WARN_UNUSED_RESULT
+dif_result_t dif_keymgr_dpe_load_root_key(const dif_keymgr_dpe_t *keymgr_dpe,
+                                          uint32_t slot_dst_sel);
+
+/**
+ * Loads the secondary root key into an empty keymgr_dpe slot.
+ *
+ * The operation is rejected if the destination slot is not empty or if it was
+ * locked with `dif_keymgr_dpe_lock_secondary_root_key()`.
+ *
+ * @param keymgr_dpe A key manager handle.
+ * @param slot_dst_sel Empty target slot used to store the secondary root key.
+ * @return The result of the operation.
+ */
+OT_WARN_UNUSED_RESULT
+dif_result_t dif_keymgr_dpe_load_secondary_root_key(
+    const dif_keymgr_dpe_t *keymgr_dpe, uint32_t slot_dst_sel);
+
+/**
+ * Disables the load root key operation until the next reset.
+ *
+ * @param keymgr_dpe A key manager handle.
+ * @return The result of the operation.
+ */
+OT_WARN_UNUSED_RESULT
+dif_result_t dif_keymgr_dpe_lock_root_key(const dif_keymgr_dpe_t *keymgr_dpe);
+
+/**
+ * Disables the load secondary root key operation until the next reset.
+ *
+ * @param keymgr_dpe A key manager handle.
+ * @return The result of the operation.
+ */
+OT_WARN_UNUSED_RESULT
+dif_result_t dif_keymgr_dpe_lock_secondary_root_key(
+    const dif_keymgr_dpe_t *keymgr_dpe);
+
+/**
  * Disables key manager dpe.
  *
  * This function disables keymgr dpe until the next power cycle by making

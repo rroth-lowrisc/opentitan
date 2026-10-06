@@ -480,6 +480,44 @@ TEST_F(KeymgrDpeTest, LoadUdsError) {
   EXPECT_EQ(sc_keymgr_dpe_load_uds(/*sel_dst_slot=*/1), kErrorKeymgrInternal);
 }
 
+TEST_F(KeymgrDpeTest, LockSecondaryRootKey) {
+  EXPECT_ABS_WRITE32(
+      base_ + KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_SECONDARY_ROOT_KEY_LOCK_LOCK_BIT, true},
+      });
+  sc_keymgr_dpe_lock_secondary_root_key();
+}
+
+TEST_F(KeymgrDpeTest, LoadSecondaryRootKey) {
+  ExpectControlRegSet(
+      /*sw_binding_only=*/false,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_SECONDARY_ROOT_KEY,
+      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, /*src_slot=*/0,
+      /*dst_slot=*/1);
+  ExpectStartOperation();
+  ExpectWaitUntilDone(/*busy_cycles=*/1,
+                      KEYMGR_DPE_OP_STATUS_STATUS_VALUE_DONE_SUCCESS);
+  EXPECT_EQ(sc_keymgr_dpe_load_secondary_root_key(/*sel_dst_slot=*/1),
+            kErrorOk);
+}
+
+TEST_F(KeymgrDpeTest, LoadSecondaryRootKeyError) {
+  ExpectControlRegSet(
+      /*sw_binding_only=*/false,
+      KEYMGR_DPE_CONTROL_SHADOWED_OPERATION_VALUE_LOAD_SECONDARY_ROOT_KEY,
+      KEYMGR_DPE_CONTROL_SHADOWED_DEST_SEL_VALUE_NONE, /*src_slot=*/0,
+      /*dst_slot=*/1);
+  ExpectStartOperation();
+  // Loading the secondary root key into an occupied slot or while locked
+  // reports an error.
+  ExpectWaitUntilDone(/*busy_cycles=*/1,
+                      KEYMGR_DPE_OP_STATUS_STATUS_VALUE_DONE_ERROR);
+  ExpectErrCodeReadClear(1 << KEYMGR_DPE_ERR_CODE_INVALID_OP_BIT);
+  EXPECT_EQ(sc_keymgr_dpe_load_secondary_root_key(/*sel_dst_slot=*/1),
+            kErrorKeymgrInternal);
+}
+
 TEST_F(KeymgrDpeTest, AdvanceInitial) {
   ExpectStatusCheck(KEYMGR_DPE_OP_STATUS_STATUS_VALUE_IDLE,
                     KEYMGR_DPE_WORKING_STATE_STATE_VALUE_RESET,

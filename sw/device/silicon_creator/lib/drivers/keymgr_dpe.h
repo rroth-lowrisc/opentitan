@@ -397,6 +397,29 @@ OT_WARN_UNUSED_RESULT
 rom_error_t sc_keymgr_dpe_load_uds(uint32_t sel_dst_slot);
 
 /**
+ * Locks the load secondary root key operation until the next reset.
+ *
+ * When this function is called then the function
+ * "sc_keymgr_dpe_load_secondary_root_key" will generate an error as the
+ * secondary root key is locked. This lock can only be released by resetting
+ * the device.
+ *
+ */
+void sc_keymgr_dpe_lock_secondary_root_key(void);
+
+/**
+ * Load the secondary root key into an empty hw slot.
+ *
+ * Load the secondary root key into the selected hw slot. If the selected hw
+ * slot is not empty then the keymgr_dpe will throw an error.
+ *
+ * @param sel_dst_slot empty destination slot for the secondary root key.
+ * @return `kErrorOk`
+ */
+OT_WARN_UNUSED_RESULT
+rom_error_t sc_keymgr_dpe_load_secondary_root_key(uint32_t sel_dst_slot);
+
+/**
  * Executes the first advance call to load the UDS in the selected slot and
  * sets the keymgr_dpe FSM to available.
  *
