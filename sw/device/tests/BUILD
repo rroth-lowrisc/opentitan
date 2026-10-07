@@ -2447,6 +2447,36 @@ opentitan_test(
     ],
 )
 
+opentitan_test(
+    name = "keymgr_dpe_secondary_root_key_test",
+    srcs = ["keymgr_dpe_secondary_root_key_test.c"],
+    exec_env = dicts.add(
+        EARLGREY_TEST_ENVS,
+        {
+            "//hw/top_earlgrey:silicon_creator": None,
+        },
+    ),
+    qemu = qemu_params(
+        globals = {
+            # Test uses rstmgr, keep running on fatal resets:
+            "ot-rstmgr.fatal_reset": 0,
+        },
+    ),
+    verilator = verilator_params(timeout = "long"),
+    deps = [
+        "//hw/top/dt",
+        "//hw/top:keymgr_dpe_c_regs",
+        "//sw/device/lib/base:bitfield",
+        "//sw/device/lib/base:mmio",
+        "//sw/device/lib/dif:keymgr_dpe",
+        "//sw/device/lib/dif:kmac",
+        "//sw/device/lib/runtime:hart",
+        "//sw/device/lib/runtime:log",
+        "//sw/device/lib/testing:keymgr_dpe_testutils",
+        "//sw/device/lib/testing/test_framework:ottf_main",
+    ],
+)
+
 otp_json(
     name = "otp_ctrl_descrambling_otp_json",
     partitions = [

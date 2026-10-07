@@ -140,5 +140,29 @@
         "//sw/device/tests/crypto:ecdsa_p384_sideload_functest",
       ]
     }
+    {
+      name: chip_sw_keymgr_dpe_secondary_root_key
+      desc: '''Verify the keymgr dpe load (secondary) root key operations and their locks.
+
+            - Configure keymgr dpe to enter the available state.
+            - Load the creator root key and the secondary root key into two empty slots.
+            - Check that `DEBUG.INVALID_SECONDARY_ROOT_KEY` is not set.
+            - Verify that loading the secondary root key into an occupied slot is rejected.
+            - Generate a SW key with the same parameters from both root key slots and verify that
+              the keys differ.
+            - Advance both root key slots with the same parameters, generate a SW key with the
+              same parameters from both and verify that the keys differ.
+            - Erase and reload the secondary root key, advance it again and verify that the same
+              SW key is generated.
+            - Lock the load secondary root key operation and verify that a subsequent load is
+              rejected.
+            - Verify that the load root key operation is not affected by the secondary root key
+              lock, then lock it and verify that a subsequent load is rejected.
+            - Verify that an invalid load operation does not change the keymgr dpe state.
+            '''
+      stage: V2
+      si_stage: NA
+      tests: ["chip_sw_keymgr_dpe_secondary_root_key"]
+    }
   ]
 }
