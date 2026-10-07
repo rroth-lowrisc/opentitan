@@ -210,9 +210,9 @@ package keymgr_dpe_pkg;
 
   parameter keymgr_dpe_creator_root_key_t KEYMGR_DPE_SECONDARY_ROOT_KEY_DEFAULT = '{
     share0       : 256'h77f2d6be9a72d1a59d5cecdb8642890fed982af1a627140616036d0f146e4d9d,
-    share0_valid : 1'b0,
+    share0_valid : 1'b1,
     share1       : 256'h258cb510c30b142de90df495810d0a62bd679b7961061a9b7273b5215c010058,
-    share1_valid : 1'b0
+    share1_valid : 1'b1
   };
 
   parameter keymgr_dpe_creator_seed_t KEYMGR_DPE_CREATOR_SEED_DEFAULT = '{
