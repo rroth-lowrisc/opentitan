@@ -285,7 +285,7 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
       keymgr_dpe_pkg::OpDpeGenHwOut: begin
         // generating versioned key's is only valid
         // during available state and it's a good op if
-        // max_key_ver <= max_key_version
+        // max_key_ver <= max_key_version and the slot policy "allow_keygen" is set
         is_good_op &= (!(current_state inside {
           keymgr_dpe_pkg::StWorkDpeInvalid,
           keymgr_dpe_pkg::StWorkDpeDisabled,
@@ -293,6 +293,7 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
         })) ? key_version <=
         cfg.keymgr_dpe_vif.internal_key_slots[src_slot].max_key_version : 0;
         is_good_op &= cfg.keymgr_dpe_vif.internal_key_slots[src_slot].valid == 1;
+        is_good_op &= cfg.keymgr_dpe_vif.internal_key_slots[src_slot].key_policy.allow_keygen;
       end
       keymgr_dpe_pkg::OpDpeErase: begin
         is_good_op &= !(current_state inside {
@@ -384,10 +385,10 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
     sema_update_control_csr.get();
     `uvm_info(`gfn,
               $sformatf({"Derive DPE context from %0d to %0d in state %s",
-                         " - pol. parent: %b pol. child: %b, pol. export: %b"},
+                         " - pol. parent: %b pol. child: %b, pol. export: %b, pol. keygen: %b"},
                          src_slot, dst_slot, current_state.name,
                          policy.retain_parent, policy.allow_child,
-                         policy.exportable),
+                         policy.exportable, policy.allow_keygen),
               UVM_MEDIUM)
 
     ral.control_shadowed.operation.set(keymgr_dpe_pkg::OpDpeAdvance);
@@ -398,6 +399,7 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
     ral.slot_policy.exportable.set(policy.exportable);
     ral.slot_policy.allow_child.set(policy.allow_child);
     ral.slot_policy.retain_parent.set(policy.retain_parent);
+    ral.slot_policy.allow_keygen.set(policy.allow_keygen);
     csr_update(.csr(ral.slot_policy));
     csr_update(.csr(ral.control_shadowed));
     csr_wr(.ptr(ral.start), .value(1));
