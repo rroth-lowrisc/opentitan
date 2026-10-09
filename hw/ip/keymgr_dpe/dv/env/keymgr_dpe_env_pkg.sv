@@ -104,6 +104,13 @@ package keymgr_dpe_env_pkg;
 
   string msg_id = "keymgr_dpe_env_pkg";
   // functions
+  // The OPERATION field is wider than needed, so SW can program encodings that do not map to any
+  // operation. The DUT rejects these in every working state with an `invalid_op` error.
+  function automatic bit is_known_operation(keymgr_dpe_pkg::keymgr_dpe_ops_e op);
+    keymgr_dpe_pkg::keymgr_dpe_ops_e known_op;
+    return $cast(known_op, int'(op));
+  endfunction
+
   // exposed working states are StWorkDpeReset, StWorkDpeAvailable,
   //  StWorkDpeDisabled, StWorkDpeInvalid
   //  1st advance call brings state from StWorkDpeReset to StWorkDpeAvailable,

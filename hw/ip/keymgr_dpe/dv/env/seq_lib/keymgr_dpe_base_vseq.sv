@@ -310,6 +310,8 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
         });
       end
       default: begin
+        // Unknown operations are rejected in every state
+        if (!is_known_operation(cast_operation)) is_good_op = 0;
       end
     endcase
 
@@ -436,6 +438,35 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
     if (wait_done) wait_op_done();
   endtask : keymgr_dpe_generate
 
+  // Issue an OPERATION encoding that does not map to any keymgr_dpe operation. The DUT is expected
+  // to reject it with an `invalid_op` error, without changing the working state or the key slots.
+  virtual task keymgr_dpe_unknown_op(bit wait_done = 1);
+    bit [$bits(keymgr_dpe_pkg::keymgr_dpe_ops_e)-1:0] op_val;
+    keymgr_dpe_pkg::keymgr_dpe_exposed_working_state_e exp_next_state;
+
+    do begin
+      op_val = $urandom();
+    end while (is_known_operation(keymgr_dpe_pkg::keymgr_dpe_ops_e'(op_val)));
+    exp_next_state = get_next_state(current_state, keymgr_dpe_pkg::keymgr_dpe_ops_e'(op_val));
+
+    sema_update_control_csr.get();
+    `uvm_info(`gfn,
+              $sformatf("Issue unknown operation %0d in state %s", op_val, current_state.name),
+              UVM_MEDIUM)
+
+    ral.control_shadowed.operation.set(op_val);
+    ral.control_shadowed.slot_src_sel.set(src_slot);
+    ral.control_shadowed.slot_dst_sel.set(dst_slot);
+    csr_update(.csr(ral.control_shadowed));
+    csr_wr(.ptr(ral.start), .value(1));
+    sema_update_control_csr.put();
+
+    if (wait_done) begin
+      wait_op_done();
+      if (get_check_en()) `DV_CHECK_EQ(current_state, exp_next_state)
+    end
+  endtask : keymgr_dpe_unknown_op
+
   virtual task keymgr_dpe_rd_clr();
     bit [keymgr_dpe_pkg::Shares-1:0][DIGEST_SHARE_WORD_NUM-1:0][TL_DW-1:0] sw_share_output;
 
@@ -465,7 +496,8 @@ class keymgr_dpe_base_vseq extends cip_base_vseq #(
 
   // issue any invalid operation at reset state to trigger op error
   virtual task keymgr_dpe_invalid_op_at_reset_state();
-    keymgr_dpe_operations(.advance_state(0));
+    if ($urandom_range(0, 1)) keymgr_dpe_unknown_op();
+    else keymgr_dpe_operations(.advance_state(0));
   endtask
 
   // when reset occurs or keymgr_dpe_en = Off, disable checks in seq and check in scb only
