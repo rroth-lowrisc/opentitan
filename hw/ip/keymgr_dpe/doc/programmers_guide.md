@@ -27,7 +27,7 @@ The advance operation is executed by configuring the following CSR:
 *  Set `SW_BINDING`.
 *  Set `SW_BINDING_REGWEN` to zero, if modifications on `SW_BINDING` needs to be prevented until the next advance call.
 *  Set `CONTROL_SHADOWED.SW_BINDING_ONLY` if this advance call should use `SW_BINDING` only, excluding all HW binding values.
-Once `ENFORCE_SW_BINDING.ENFORCE` has been set, this is mandatory for advance calls whose parent slot consumes HW binding values (i.e. `boot_stage` 0 to 2: Creator, OwnerInt and Owner).
+Once `ENFORCE_SW_BINDING.ENFORCE` has been set, this is mandatory for advance calls whose parent slot consumes HW binding values (i.e. `boot_stage` 0 to 3: Creator, CreatorInt, OwnerInt and Owner).
 It has no effect for parents in later boot stages, whose derivation only uses `SW_BINDING`.
 *  Set `MAX_KEY_VER_SHADOWED`.
 *  Set `MAX_KEY_VER_REGWEN` to zero, if modifications on `MAX_KEY_VER_SHADOWED` needs to be prevented until the next advance call.
