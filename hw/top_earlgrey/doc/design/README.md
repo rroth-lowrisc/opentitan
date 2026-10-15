@@ -223,7 +223,7 @@ See those specifications for more details.
 #### OTP
 
 Earl Grey has no OTP macro.
-Instead, the [OTP controller](../../ip_autogen/otp_ctrl/README.md) stores its 2 KiB of one-time programmable memory (1032 words of 16 bit) in the OTP region of the RRAM.
+Instead, the [OTP controller](../../ip_autogen/otp_ctrl/README.md) stores its 2104 bytes of one-time programmable memory (1052 words of 16 bit) in the OTP region of the RRAM.
 The RRAM controller implements OTP semantics on that region: bits can only be set, never cleared.
 
 #### SRAMs
