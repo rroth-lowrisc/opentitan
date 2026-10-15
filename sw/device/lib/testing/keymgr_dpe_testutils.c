@@ -165,23 +165,29 @@ status_t keymgr_dpe_testutils_nvm_init(
                                        /*readback=*/true);
 }
 
-static status_t check_lock_otp_partition(void) {
-  dif_otp_ctrl_t otp;
-  TRY(dif_otp_ctrl_init_from_dt(kDtOtpCtrl, &otp));
-
+static status_t check_lock_otp_partition(const dif_otp_ctrl_t *otp,
+                                         dif_otp_ctrl_partition_t partition) {
   bool is_computed;
-  TRY(dif_otp_ctrl_is_digest_computed(&otp, kDifOtpCtrlPartitionSecret2,
-                                      &is_computed));
+  TRY(dif_otp_ctrl_is_digest_computed(otp, partition, &is_computed));
   if (is_computed) {
     uint64_t digest;
-    TRY(dif_otp_ctrl_get_digest(&otp, kDifOtpCtrlPartitionSecret2, &digest));
+    TRY(dif_otp_ctrl_get_digest(otp, partition, &digest));
     LOG_INFO("OTP partition locked. Digest: %x-%x", ((uint32_t *)&digest)[0],
              ((uint32_t *)&digest)[1]);
     return OK_STATUS();
   }
 
-  return otp_ctrl_testutils_lock_partition(&otp, kDifOtpCtrlPartitionSecret2,
-                                           0);
+  return otp_ctrl_testutils_lock_partition(otp, partition, 0);
+}
+
+static status_t check_lock_otp_partitions(void) {
+  dif_otp_ctrl_t otp;
+  TRY(dif_otp_ctrl_init_from_dt(kDtOtpCtrl, &otp));
+
+  // SECRET2 holds the creator root key and SECRET3 the field entropy. The key
+  // manager only considers these secrets valid once their partition is locked.
+  TRY(check_lock_otp_partition(&otp, kDifOtpCtrlPartitionSecret2));
+  return check_lock_otp_partition(&otp, kDifOtpCtrlPartitionSecret3);
 }
 
 static status_t dif_init(dif_keymgr_dpe_t *keymgr_dpe, dif_kmac_t *kmac) {
@@ -312,7 +318,7 @@ status_t keymgr_dpe_testutils_init_nvm_then_reset(void) {
     }
     TRY(keymgr_dpe_testutils_nvm_init(creator_secret, &kOwnerSecret));
 
-    TRY(check_lock_otp_partition());
+    TRY(check_lock_otp_partitions());
 
     // Reboot device.
     LOG_INFO(
