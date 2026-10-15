@@ -84,7 +84,8 @@ package otp_ctrl_env_pkg;
     HwCfg1Offset,
     Secret0Offset,
     Secret1Offset,
-    Secret2Offset
+    Secret2Offset,
+    Secret3Offset
   };
 
   // lc does not have digest
@@ -98,10 +99,12 @@ package otp_ctrl_env_pkg;
     HwCfg1DigestOffset >> 2,
     Secret0DigestOffset >> 2,
     Secret1DigestOffset >> 2,
-    Secret2DigestOffset >> 2
+    Secret2DigestOffset >> 2,
+    Secret3DigestOffset >> 2
   };
 
   parameter int PART_OTP_ZEROIZED_ADDRS [NumPart-1] = {
+    -1, // This partition has no zeroized field.
     -1, // This partition has no zeroized field.
     -1, // This partition has no zeroized field.
     -1, // This partition has no zeroized field.
@@ -146,6 +149,7 @@ package otp_ctrl_env_pkg;
     OtpPartitionSecret0Idx,
     OtpPartitionSecret1Idx,
     OtpPartitionSecret2Idx,
+    OtpPartitionSecret3Idx,
     OtpPartitionLifeCycleIdx
   } otp_partition_e;
 

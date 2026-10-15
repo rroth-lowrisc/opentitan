@@ -241,6 +241,7 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
       Secret0Idx: force `BUF_PART_OTP_CMD_PATH(Secret0Idx) = otp_ctrl_macro_pkg::cmd_e'(2'b10);
       Secret1Idx: force `BUF_PART_OTP_CMD_PATH(Secret1Idx) = otp_ctrl_macro_pkg::cmd_e'(2'b10);
       Secret2Idx: force `BUF_PART_OTP_CMD_PATH(Secret2Idx) = otp_ctrl_macro_pkg::cmd_e'(2'b10);
+      Secret3Idx: force `BUF_PART_OTP_CMD_PATH(Secret3Idx) = otp_ctrl_macro_pkg::cmd_e'(2'b10);
       LifeCycleIdx: force `LC_PART_OTP_CMD_PATH              = otp_ctrl_macro_pkg::cmd_e'(2'b10);
       default: begin
         `uvm_fatal("otp_ctrl_if",
@@ -257,6 +258,7 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
       Secret0Idx: release `BUF_PART_OTP_CMD_PATH(Secret0Idx);
       Secret1Idx: release `BUF_PART_OTP_CMD_PATH(Secret1Idx);
       Secret2Idx: release `BUF_PART_OTP_CMD_PATH(Secret2Idx);
+      Secret3Idx: release `BUF_PART_OTP_CMD_PATH(Secret3Idx);
       LifeCycleIdx: release `LC_PART_OTP_CMD_PATH;
       default: begin
         `uvm_fatal("otp_ctrl_if",
@@ -280,6 +282,7 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
     `FORCE_OTP_PART_LOCK_WITH_RAND_NON_MUBI_VAL(Secret0Idx)
     `FORCE_OTP_PART_LOCK_WITH_RAND_NON_MUBI_VAL(Secret1Idx)
     `FORCE_OTP_PART_LOCK_WITH_RAND_NON_MUBI_VAL(Secret2Idx)
+    `FORCE_OTP_PART_LOCK_WITH_RAND_NON_MUBI_VAL(Secret3Idx)
   endtask
 
   task automatic release_part_access_mubi();

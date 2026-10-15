@@ -178,9 +178,13 @@ module otp_ctrl
   // Life Cycle Signal Synchronization //
   ///////////////////////////////////////
 
-  lc_ctrl_pkg::lc_tx_t lc_creator_seed_sw_rw_en, lc_owner_seed_sw_rw_en,
-                       lc_seed_hw_rd_en, lc_check_byp_en;
-  lc_ctrl_pkg::lc_tx_t [1:0] lc_rma_state;
+  // Number of separately buffered copies of the synchronized LC signals.
+  localparam int NumLcOwnerSeedSwRwEnCopies = 1;
+  localparam int NumLcRmaStateCopies        = 2;
+
+  lc_ctrl_pkg::lc_tx_t lc_creator_seed_sw_rw_en, lc_seed_hw_rd_en, lc_check_byp_en;
+  lc_ctrl_pkg::lc_tx_t [NumLcOwnerSeedSwRwEnCopies-1:0] lc_owner_seed_sw_rw_en;
+  lc_ctrl_pkg::lc_tx_t [NumLcRmaStateCopies-1:0] lc_rma_state;
   // NumAgents + lfsr timer and scrambling datapath.
   lc_ctrl_pkg::lc_tx_t [NumAgentsIdx+1:0] lc_escalate_en, lc_escalate_en_synced;
   // Single wire for gating assertions in arbitration and CDC primitives.
@@ -205,12 +209,12 @@ module otp_ctrl
   );
 
   prim_lc_sync #(
-    .NumCopies(1)
+    .NumCopies(NumLcOwnerSeedSwRwEnCopies)
   ) u_prim_lc_sync_owner_seed_sw_rw_en (
     .clk_i,
     .rst_ni,
     .lc_en_i(lc_owner_seed_sw_rw_en_i),
-    .lc_en_o({lc_owner_seed_sw_rw_en})
+    .lc_en_o(lc_owner_seed_sw_rw_en)
   );
 
   prim_lc_sync #(
@@ -232,12 +236,12 @@ module otp_ctrl
   );
 
   prim_lc_sync #(
-    .NumCopies(2)
+    .NumCopies(NumLcRmaStateCopies)
   ) u_prim_lc_sync_rma_state (
     .clk_i,
     .rst_ni,
     .lc_en_i(lc_rma_state_i),
-    .lc_en_o({lc_rma_state})
+    .lc_en_o(lc_rma_state)
   );
 
   /////////////////////////////////////
@@ -379,7 +383,7 @@ module otp_ctrl
         end
       end
     end
-    if (lc_ctrl_pkg::lc_tx_test_false_loose(lc_owner_seed_sw_rw_en)) begin
+    if (lc_ctrl_pkg::lc_tx_test_false_loose(lc_owner_seed_sw_rw_en[0])) begin
       for (int k = 0; k < NumPart; k++) begin
         if (PartInfo[k].iskeymgr_owner) begin
           part_access_pre[k] = {2{prim_mubi_pkg::MuBi8True}};
