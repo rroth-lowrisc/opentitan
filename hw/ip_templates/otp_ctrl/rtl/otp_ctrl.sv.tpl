@@ -7,6 +7,11 @@
 <%
   import math
   from topgen.lib import Name
+
+  # Map each item name to the camel-case name of the partition holding it.
+  item_part = {item["name"]: Name.to_camel_case(part["name"])
+               for part in otp_mmap["partitions"] for item in part["items"]}
+  has_field_entropy = "FIELD_ENTROPY" in item_part
 %>
 `include "prim_assert.sv"
 
@@ -81,6 +86,9 @@ module otp_ctrl
   output keymgr_dpe_pkg::keymgr_dpe_creator_root_key_t keymgr_creator_root_key_o,
   output keymgr_dpe_pkg::keymgr_dpe_creator_seed_t     keymgr_creator_seed_o,
   output keymgr_dpe_pkg::keymgr_dpe_owner_seed_t       keymgr_owner_seed_o,
+% if has_field_entropy:
+  output keymgr_dpe_pkg::keymgr_dpe_field_entropy_t    keymgr_field_entropy_o,
+% endif
   // Scrambling key requests
 % if enable_nvm_key:
   input  nvm_otp_key_req_t                           nvm_otp_key_i,
@@ -187,9 +195,19 @@ module otp_ctrl
   // Life Cycle Signal Synchronization //
   ///////////////////////////////////////
 
-  lc_ctrl_pkg::lc_tx_t lc_creator_seed_sw_rw_en, lc_owner_seed_sw_rw_en,
-                       lc_seed_hw_rd_en, lc_check_byp_en;
-  lc_ctrl_pkg::lc_tx_t [1:0] lc_rma_state;
+  // Number of separately buffered copies of the synchronized LC signals.
+  localparam int NumLcOwnerSeedSwRwEnCopies = ${3 if has_field_entropy else 1};
+  localparam int NumLcRmaStateCopies        = ${4 if has_field_entropy else 2};
+
+% if has_field_entropy:
+  // The partition holding FIELD_ENTROPY derives its own SW access and HW release enables
+  // (On in DEV, PROD, PROD_END and RMA) and its own digest.
+  lc_ctrl_pkg::lc_tx_t field_entropy_sw_rw_en, field_entropy_hw_rd_en;
+
+% endif
+  lc_ctrl_pkg::lc_tx_t lc_creator_seed_sw_rw_en, lc_seed_hw_rd_en, lc_check_byp_en;
+  lc_ctrl_pkg::lc_tx_t [NumLcOwnerSeedSwRwEnCopies-1:0] lc_owner_seed_sw_rw_en;
+  lc_ctrl_pkg::lc_tx_t [NumLcRmaStateCopies-1:0] lc_rma_state;
   // NumAgents + lfsr timer and scrambling datapath.
   lc_ctrl_pkg::lc_tx_t [NumAgentsIdx+1:0] lc_escalate_en, lc_escalate_en_synced;
   // Single wire for gating assertions in arbitration and CDC primitives.
@@ -214,12 +232,12 @@ module otp_ctrl
   );
 
   prim_lc_sync #(
-    .NumCopies(1)
+    .NumCopies(NumLcOwnerSeedSwRwEnCopies)
   ) u_prim_lc_sync_owner_seed_sw_rw_en (
     .clk_i,
     .rst_ni,
     .lc_en_i(lc_owner_seed_sw_rw_en_i),
-    .lc_en_o({lc_owner_seed_sw_rw_en})
+    .lc_en_o(lc_owner_seed_sw_rw_en)
   );
 
   prim_lc_sync #(
@@ -241,12 +259,12 @@ module otp_ctrl
   );
 
   prim_lc_sync #(
-    .NumCopies(2)
+    .NumCopies(NumLcRmaStateCopies)
   ) u_prim_lc_sync_rma_state (
     .clk_i,
     .rst_ni,
     .lc_en_i(lc_rma_state_i),
-    .lc_en_o({lc_rma_state})
+    .lc_en_o(lc_rma_state)
   );
 
   /////////////////////////////////////
@@ -388,13 +406,20 @@ module otp_ctrl
         end
       end
     end
-    if (lc_ctrl_pkg::lc_tx_test_false_loose(lc_owner_seed_sw_rw_en)) begin
+    if (lc_ctrl_pkg::lc_tx_test_false_loose(lc_owner_seed_sw_rw_en[0])) begin
       for (int k = 0; k < NumPart; k++) begin
         if (PartInfo[k].iskeymgr_owner) begin
           part_access_pre[k] = {2{prim_mubi_pkg::MuBi8True}};
         end
       end
     end
+% if has_field_entropy:
+    // The partition holding FIELD_ENTROPY only becomes accessible when its own provisioning
+    // window is open.
+    if (lc_ctrl_pkg::lc_tx_test_false_loose(field_entropy_sw_rw_en)) begin
+      part_access_pre[${item_part["FIELD_ENTROPY"]}Idx] = {2{prim_mubi_pkg::MuBi8True}};
+    end
+% endif
 
     // Final DAI access override: Allow read if in RMA life cycle.
     // Note: This also allows read access when the partition is not fully initialized.
@@ -1497,6 +1522,54 @@ end
     $rose(owner_seed_valid_q) |=> $stable(lc_seed_hw_rd_en) [*1:$],
     clk_i, !rst_ni || lc_ctrl_pkg::lc_tx_test_true_loose(lc_escalate_en_i) // Disable if escalating
   )
+% if has_field_entropy:
+
+  // This block is only generated if the OTP memory map contains the `FIELD_ENTROPY` item.
+  // Set the valid signal only if the secret is provisioned (digest is nonzero).
+  logic field_entropy_valid_d, field_entropy_valid_q;
+  assign field_entropy_valid_d = part_digest[${item_part["FIELD_ENTROPY"]}Idx] != '0;
+
+  // This mirrors the creator seed gating in lc_ctrl
+  // - DEV, PROD, PROD_END: SW access until the partition is locked, HW release afterwards.
+  // - RMA: SW access and HW release.
+  // - All other states: neither.
+  lc_ctrl_pkg::lc_tx_t field_entropy_locked;
+  assign field_entropy_locked = lc_ctrl_pkg::lc_tx_bool_to_lc_tx(field_entropy_valid_d);
+
+  always_comb begin : p_field_entropy_lc_en
+    field_entropy_sw_rw_en = lc_ctrl_pkg::lc_tx_and_hi(
+        lc_owner_seed_sw_rw_en[1],
+        lc_ctrl_pkg::lc_tx_or_hi(lc_ctrl_pkg::lc_tx_inv(field_entropy_locked),
+                                 lc_rma_state[2]));
+    field_entropy_hw_rd_en = lc_ctrl_pkg::lc_tx_and_hi(
+        lc_owner_seed_sw_rw_en[2],
+        lc_ctrl_pkg::lc_tx_or_hi(field_entropy_locked, lc_rma_state[3]));
+  end
+
+  prim_flop #(
+    .Width(1)
+  ) u_field_entropy_valid (
+    .clk_i,
+    .rst_ni,
+    .d_i (field_entropy_valid_d),
+    .q_o (field_entropy_valid_q)
+  );
+
+  always_comb begin : p_field_entropy
+    keymgr_field_entropy_o.secret_valid = field_entropy_valid_q;
+    if (lc_ctrl_pkg::lc_tx_test_true_strict(field_entropy_hw_rd_en)) begin
+      keymgr_field_entropy_o.secret = part_buf_data[FieldEntropyOffset +: FieldEntropySize];
+    end else begin
+      keymgr_field_entropy_o.secret =
+          RndCnstPartInvDefault[FieldEntropyOffset*8 +: FieldEntropySize*8];
+    end
+  end
+
+  `ASSERT(FieldEntropyHwRdEnStable_A,
+    $rose(field_entropy_valid_q) |=> $stable(field_entropy_hw_rd_en) [*1:$],
+    clk_i, !rst_ni || lc_ctrl_pkg::lc_tx_test_true_loose(lc_escalate_en_i) // Disable if escalating
+  )
+% endif
 
   // Scrambling Keys
   assign scrmbl_key_seed_valid = part_digest[Secret1Idx] != '0;
@@ -1579,6 +1652,10 @@ end
                keymgr_dpe_pkg::KeyWidth == CreatorRootKeyShare0Size * 8)
   `ASSERT_INIT(CreatorRootKeyShare1Size_A,
                keymgr_dpe_pkg::KeyWidth == CreatorRootKeyShare1Size * 8)
+% if has_field_entropy:
+  `ASSERT_INIT(FieldEntropySize_A,
+               keymgr_dpe_pkg::KeyWidth == FieldEntropySize * 8)
+% endif
 % if enable_nvm_key:
   `ASSERT_INIT(NvmDataKeySeedSize_A,       NvmKeySeedWidth == NvmDataKeySeedSize * 8)
   `ASSERT_INIT(NvmAddrKeySeedSize_A,       NvmKeySeedWidth == NvmAddrKeySeedSize * 8)
@@ -1601,6 +1678,9 @@ end
   `ASSERT_KNOWN(KeymgrCreatorRootKey_A,      keymgr_creator_root_key_o)
   `ASSERT_KNOWN(KeymgrCreatorSeed_A,         keymgr_creator_seed_o)
   `ASSERT_KNOWN(KeymgrOwnerSeed_A,           keymgr_owner_seed_o)
+% if has_field_entropy:
+  `ASSERT_KNOWN(KeymgrFieldEntropy_A,        keymgr_field_entropy_o)
+% endif
 % if enable_nvm_key:
   `ASSERT_KNOWN(NvmOtpKeyRspKnown_A,         nvm_otp_key_o)
 % endif
