@@ -93,6 +93,16 @@ enum {
                          OTP_CTRL_PARAM_SECRET2_OFFSET,
   kRootKeyOffsetShare1 = OTP_CTRL_PARAM_CREATOR_ROOT_KEY_SHARE1_OFFSET -
                          OTP_CTRL_PARAM_SECRET2_OFFSET,
+
+  /**
+   * SECRET3 partition OTP fields.
+   */
+  // FIELD_ENTROPY
+  kFieldEntropyOffset =
+      OTP_CTRL_PARAM_FIELD_ENTROPY_OFFSET - OTP_CTRL_PARAM_SECRET3_OFFSET,
+  kFieldEntropySizeInBytes = OTP_CTRL_PARAM_FIELD_ENTROPY_SIZE,
+  kFieldEntropySizeIn32BitWords = kFieldEntropySizeInBytes / sizeof(uint32_t),
+  kFieldEntropySizeIn64BitWords = kFieldEntropySizeInBytes / sizeof(uint64_t),
 };
 
 #endif  // OPENTITAN_SW_DEVICE_SILICON_CREATOR_MANUF_LIB_OTP_FIELDS_H_

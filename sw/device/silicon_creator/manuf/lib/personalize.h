@@ -102,4 +102,39 @@ status_t manuf_personalize_nvm_asymm_key_seed(nvm_info_field_t field,
  */
 status_t manuf_personalize_device_secrets_check(const dif_otp_ctrl_t *otp_ctrl);
 
+/**
+ * Configures the SECRET3 OTP partition.
+ *
+ * The SECRET3 partition contains the field entropy (FIELD_ENTROPY) consumed by
+ * the keymgr_dpe CreatorInt boot stage. The field entropy is extracted from a
+ * CSRNG instance and is hidden from software once the partition is locked.
+ *
+ * This step is independent of the SECRET2 provisioning state.
+ *
+ * Preconditions:
+ * - Device is in DEV, PROD, or PROD_END lifecycle stage.
+ * - Device has SW CSRNG data access (configured in HW_CFG0 partition).
+ *
+ * Note: The test will skip all programming steps and succeed if the SECRET3
+ * partition is already locked. This is to facilitate test re-runs.
+ *
+ * The caller should reset the device after calling this function and call
+ * `manuf_personalize_device_secret3_check()` afterwards to confirm that the
+ * OTP partition was successfully locked.
+ *
+ * @param lc_ctrl Lifecycle controller instance.
+ * @param otp_ctrl OTP controller instance.
+ * @return OK_STATUS on success.
+ */
+status_t manuf_personalize_device_secret3(const dif_lc_ctrl_t *lc_ctrl,
+                                          const dif_otp_ctrl_t *otp_ctrl);
+
+/**
+ * Checks the SECRET3 OTP partition end state.
+ *
+ * @param otp_ctrl OTP controller interface.
+ * @return OK_STATUS if the SECRET3 partition is locked.
+ */
+status_t manuf_personalize_device_secret3_check(const dif_otp_ctrl_t *otp_ctrl);
+
 #endif  // OPENTITAN_SW_DEVICE_SILICON_CREATOR_MANUF_LIB_PERSONALIZE_H_

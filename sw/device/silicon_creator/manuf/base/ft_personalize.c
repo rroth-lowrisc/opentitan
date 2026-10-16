@@ -373,8 +373,8 @@ static status_t measure_otp_partition(otp_partition_t partition,
 }
 
 /**
- * Provision OTP SECRET{1,2} partitions, keymgr dpe NVM info pages, enable NVM
- * scrambling, and reboot.
+ * Provision OTP SECRET{1,2,3} partitions, keymgr dpe NVM info pages, enable
+ * NVM scrambling, and reboot.
  */
 static status_t personalize_otp_and_nvm_secrets(ujson_t *uj) {
   // Provision OTP Secret1 partition, and complete provisioning of OTP
@@ -389,6 +389,11 @@ static status_t personalize_otp_and_nvm_secrets(ujson_t *uj) {
     base_printf("Bootstrap requested.\n");
     wait_for_interrupt();
   }
+
+  // Both the SECRET2 and the SECRET3 steps require a reset to activate the
+  // partitions. Perform a single reset after both steps, as the host expects
+  // only one reset after sending the RMA unlock token hash.
+  bool reset_required = false;
 
   // Provision OTP Secret2 partition and NVM info pages 1, 2, and 4
   // (keymgr dpe and DICE keygen seeds).
@@ -418,6 +423,16 @@ static status_t personalize_otp_and_nvm_secrets(ujson_t *uj) {
                                    /*data_in=*/&kKeyGenVersion, /*num_words=*/1,
                                    /*erase_page_before_write=*/false,
                                    /*readback=*/true));
+    reset_required = true;
+  }
+
+  // Provision OTP Secret3 partition (field entropy).
+  if (!status_ok(manuf_personalize_device_secret3_check(&otp_ctrl))) {
+    TRY(manuf_personalize_device_secret3(&lc_ctrl, &otp_ctrl));
+    reset_required = true;
+  }
+
+  if (reset_required) {
     sw_reset();
   }
 

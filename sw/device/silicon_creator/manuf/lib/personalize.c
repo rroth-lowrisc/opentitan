@@ -229,6 +229,7 @@ status_t manuf_personalize_device_secrets(
 
 OT_WARN_UNUSED_RESULT
 static status_t otp_secret_write(const dif_otp_ctrl_t *otp_ctrl,
+                                 dif_otp_ctrl_partition_t partition,
                                  uint32_t offset, size_t len) {
   enum {
     kBufferSize = 4,
@@ -256,8 +257,7 @@ static status_t otp_secret_write(const dif_otp_ctrl_t *otp_ctrl,
     return INTERNAL();
   }
 
-  TRY(otp_ctrl_testutils_dai_write64(otp_ctrl, kDifOtpCtrlPartitionSecret1,
-                                     offset, data, len));
+  TRY(otp_ctrl_testutils_dai_write64(otp_ctrl, partition, offset, data, len));
   return OK_STATUS();
 }
 
@@ -315,11 +315,14 @@ status_t manuf_personalize_device_secret1(const dif_lc_ctrl_t *lc_ctrl,
   TRY(entropy_csrng_instantiate(/*disable_trng_input=*/kHardenedBoolFalse,
                                 /*seed_material=*/NULL));
 
-  TRY(otp_secret_write(otp_ctrl, kSecret1NvmAddrKeySeedOffset,
+  TRY(otp_secret_write(otp_ctrl, kDifOtpCtrlPartitionSecret1,
+                       kSecret1NvmAddrKeySeedOffset,
                        kSecret1NvmAddrKeySeed64BitWords));
-  TRY(otp_secret_write(otp_ctrl, kSecret1NvmDataKeySeedOffset,
+  TRY(otp_secret_write(otp_ctrl, kDifOtpCtrlPartitionSecret1,
+                       kSecret1NvmDataKeySeedOffset,
                        kSecret1NvmDataKeySeed64BitWords));
-  TRY(otp_secret_write(otp_ctrl, kSecret1SramDataKeySeedOffset,
+  TRY(otp_secret_write(otp_ctrl, kDifOtpCtrlPartitionSecret1,
+                       kSecret1SramDataKeySeedOffset,
                        kSecret1SramDataKeySeed64Bitwords));
 
   TRY(entropy_csrng_uninstantiate());
@@ -333,6 +336,41 @@ status_t manuf_personalize_device_secret1_check(
     const dif_otp_ctrl_t *otp_ctrl) {
   bool is_locked;
   TRY(dif_otp_ctrl_is_digest_computed(otp_ctrl, kDifOtpCtrlPartitionSecret1,
+                                      &is_locked));
+  return is_locked ? OK_STATUS() : INTERNAL();
+}
+
+status_t manuf_personalize_device_secret3(const dif_lc_ctrl_t *lc_ctrl,
+                                          const dif_otp_ctrl_t *otp_ctrl) {
+  // Check life cycle in either PROD, PROD_END, or DEV.
+  TRY(lc_ctrl_testutils_operational_state_check(lc_ctrl));
+
+  // Skip provisioning of SECRET3 OTP partition if already done.
+  bool is_locked;
+  TRY(dif_otp_ctrl_is_digest_computed(otp_ctrl, kDifOtpCtrlPartitionSecret3,
+                                      &is_locked));
+  if (is_locked) {
+    return OK_STATUS();
+  }
+
+  TRY(entropy_complex_init(kHardenedBoolFalse));
+  TRY(entropy_csrng_instantiate(/*disable_trng_input=*/kHardenedBoolFalse,
+                                /*seed_material=*/NULL));
+
+  TRY(otp_secret_write(otp_ctrl, kDifOtpCtrlPartitionSecret3,
+                       kFieldEntropyOffset, kFieldEntropySizeIn64BitWords));
+
+  TRY(entropy_csrng_uninstantiate());
+  TRY(otp_ctrl_testutils_lock_partition(otp_ctrl, kDifOtpCtrlPartitionSecret3,
+                                        /*digest=*/0));
+
+  return OK_STATUS();
+}
+
+status_t manuf_personalize_device_secret3_check(
+    const dif_otp_ctrl_t *otp_ctrl) {
+  bool is_locked;
+  TRY(dif_otp_ctrl_is_digest_computed(otp_ctrl, kDifOtpCtrlPartitionSecret3,
                                       &is_locked));
   return is_locked ? OK_STATUS() : INTERNAL();
 }

@@ -62,6 +62,7 @@ fn send_rma_unlock_token(opts: &Opts, transport: &TransportWrapper) -> Result<()
         r"Finished provisioning OTP SECRET2 and keymgr flash info pages ...",
         opts.timeout,
     )?;
+    let _ = UartConsole::wait_for(&*uart, r"Finished provisioning OTP SECRET3 ...", opts.timeout)?;
     // Check the LC state is Dev or Prod.
     let current_lc_state = read_lc_state(transport, &opts.init.jtag_params)?;
     let valid_lc_states = HashSet::from([DifLcCtrlState::Dev, DifLcCtrlState::Prod]);

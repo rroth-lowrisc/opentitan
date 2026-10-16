@@ -94,6 +94,10 @@ bool test_main(void) {
       abort();
     }
 
+    // Both the SECRET2 and the SECRET3 steps require a reset to activate the
+    // partitions, which is performed once after both steps.
+    bool reset_required = false;
+
     // Provision the OTP SECRET2 partition and flash info pages.
     if (!status_ok(manuf_personalize_device_secrets_check(&otp_ctrl))) {
       lc_token_hash_t token_hash;
@@ -139,7 +143,18 @@ bool test_main(void) {
                                            kAttestationSeedWords));
       LOG_INFO(
           "Finished provisioning OTP SECRET2 and keymgr flash info pages ...");
+      reset_required = true;
+    }
 
+    // Provision the OTP SECRET3 partition (field entropy).
+    if (!status_ok(manuf_personalize_device_secret3_check(&otp_ctrl))) {
+      LOG_INFO("Provisioning OTP SECRET3 ...");
+      CHECK_STATUS_OK(manuf_personalize_device_secret3(&lc_ctrl, &otp_ctrl));
+      LOG_INFO("Finished provisioning OTP SECRET3 ...");
+      reset_required = true;
+    }
+
+    if (reset_required) {
       // Reset the chip to activate the OTP partitions and flash pages.
       sw_reset();
     }
