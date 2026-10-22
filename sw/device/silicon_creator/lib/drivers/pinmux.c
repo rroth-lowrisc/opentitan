@@ -65,6 +65,10 @@ static const pinmux_output_t kOutputUart0 = {
 #define PINMUX_ASSERT_EQ_(a, b) \
   static_assert((a) == (b), "Unexpected software strap configuration.")
 
+// The strap pins are read from gpio0's DATA_IN register at the bit given by
+// the peripheral input index, so gpio0's inputs must start at index 0.
+PINMUX_ASSERT_EQ_(kTopEarlgreyPinmuxPeripheralInGpio0Gpio0, 0);
+
 PINMUX_ASSERT_EQ_(SW_STRAP_0_PERIPH, kTopEarlgreyPinmuxPeripheralInGpio0Gpio22);
 PINMUX_ASSERT_EQ_(SW_STRAP_0_INSEL, kTopEarlgreyPinmuxInselIoc0);
 PINMUX_ASSERT_EQ_(SW_STRAP_0_PAD, kTopEarlgreyMuxedPadsIoc0);
