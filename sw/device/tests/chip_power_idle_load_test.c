@@ -58,8 +58,8 @@ static_assert(kDtAonTimerCount == 1,
               "this library expects exactly one aon_timer");
 static const dt_pinmux_t kPinmuxDt = 0;
 static_assert(kDtPinmuxCount == 1, "this library expects exactly one pinmux");
-static const dt_gpio_t kGpioDt = 0;
-static_assert(kDtGpioCount == 1, "this library expects exactly one gpio");
+static const dt_gpio_t kGpioDt = kDtGpio0;
+static_assert(kDtGpioCount >= 1, "this library expects at least one gpio");
 static const dt_otp_ctrl_t kOtpCtrlDt = 0;
 static_assert(kDtOtpCtrlCount == 1,
               "this library expects exactly one otp_ctrl");
