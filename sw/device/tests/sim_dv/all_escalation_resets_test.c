@@ -273,6 +273,7 @@ static void restore_fault_checker(fault_checker_t *fault_checker) {
 #if defined(OPENTITAN_IS_EARLGREY)
 static const char *adc_ctrl_inst_name = "adc_ctrl";
 static const char *entropy_src_inst_name = "entropy_src";
+static const char *gpio1_inst_name = "gpio1";
 static const char *i2c1_inst_name = "i2c1";
 static const char *i2c2_inst_name = "i2c2";
 static const char *rram_ctrl_inst_name = "rram_ctrl";
@@ -883,6 +884,10 @@ static void init_fault_checkers(fault_checker_t *checkers) {
   checkers[dt_rram_ctrl_alert_to_alert_id(
       kRramCtrlDt, kDtRramCtrlAlertFatalMacroErr)] = (fault_checker_t){
       rram_macro_fault_checker, rram_macro_inst_name, rram_fatal_check};
+
+  checkers[dt_gpio_alert_to_alert_id((dt_gpio_t)1, kDtGpioAlertFatalFault)] =
+      (fault_checker_t){trivial_fault_checker, gpio1_inst_name, we_check};
+  static_assert(kDtGpioCount >= 2, "This test needs 2 GPIO instances");
 
   checkers[dt_i2c_alert_to_alert_id((dt_i2c_t)1, kDtI2cAlertFatalFault)] =
       (fault_checker_t){trivial_fault_checker, i2c1_inst_name, we_check};

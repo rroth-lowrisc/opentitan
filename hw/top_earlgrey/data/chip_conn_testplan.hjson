@@ -464,7 +464,8 @@
             '''
       stage: V2
       tests: ["clkmgr_peri_clk_adc_ctrl_clk",
-              "clkmgr_peri_clk_gpio_clk",
+              "clkmgr_peri_clk_gpio0_clk",
+              "clkmgr_peri_clk_gpio1_clk",
               "clkmgr_peri_clk_spi_device_clk",
               "clkmgr_peri_clk_i2c0_clk",
               "clkmgr_peri_clk_i2c1_clk",
@@ -1216,7 +1217,8 @@
             - xbar_peri's rst_peri_ni
             '''
       stage: V2
-      tests: ["rstmgr_sys_io_div4_d0_gpio_rst_ni",
+      tests: ["rstmgr_sys_io_div4_d0_gpio0_rst_ni",
+              "rstmgr_sys_io_div4_d0_gpio1_rst_ni",
               "rstmgr_sys_io_div4_d0_rv_timer_rst_ni",
               "rstmgr_sys_io_div4_d0_uart0_rst_ni",
               "rstmgr_sys_io_div4_d0_uart1_rst_ni",
