@@ -94,15 +94,63 @@ static CONFIG: LazyLock<HashMap<&'static str, Config>> = LazyLock::new(|| {
     }
 });
 
+/// Number of pins of each GPIO instance.
+const GPIO_PINS: u32 = 32;
+
+/// Pinmux peripheral input and output select of pin 0 of each GPIO instance.
+static GPIO_INSTANCES: [(PinmuxPeripheralIn, PinmuxOutsel); 2] = [
+    (PinmuxPeripheralIn::Gpio0Gpio0, PinmuxOutsel::Gpio0Gpio0),
+    (PinmuxPeripheralIn::Gpio1Gpio0, PinmuxOutsel::Gpio1Gpio0),
+];
+
+/// Returns the pin index of a GPIO peripheral input within its GPIO instance.
+fn input_pin(input: PinmuxPeripheralIn) -> u32 {
+    GPIO_INSTANCES
+        .iter()
+        .map(|(base, _)| u32::from(input).wrapping_sub(u32::from(*base)))
+        .find(|i| *i < GPIO_PINS)
+        .expect("not a GPIO peripheral input")
+}
+
+/// Returns the pin index of a GPIO output select within its GPIO instance.
+fn output_pin(output: PinmuxOutsel) -> u32 {
+    GPIO_INSTANCES
+        .iter()
+        .map(|(_, base)| u32::from(output).wrapping_sub(u32::from(*base)))
+        .find(|i| *i < GPIO_PINS)
+        .expect("not a GPIO output select")
+}
+
+/// Returns the interface's pin configuration, moved to the given GPIO instance.
+fn get_config(opts: &Opts, instance: u8) -> Config {
+    let config = CONFIG
+        .get(opts.init.backend_opts.interface.as_str())
+        .expect("interface");
+    let (input_base, output_base) = GPIO_INSTANCES[usize::from(instance)];
+    Config {
+        input: config
+            .input
+            .iter()
+            .map(|(&k, &v)| (PinmuxPeripheralIn(u32::from(input_base) + input_pin(k)), v))
+            .collect(),
+        output: config
+            .output
+            .iter()
+            .map(|(&k, &v)| (k, PinmuxOutsel(u32::from(output_base) + output_pin(v))))
+            .collect(),
+    }
+}
+
 fn gpio_write(
     transport: &TransportWrapper,
     uart: &dyn Uart,
+    instance: u8,
     value: u32,
     config: &HashMap<PinmuxMioOut, PinmuxOutsel>,
     invert: u8,
 ) -> Result<()> {
     let mask = config.values().fold(0, |acc, v| {
-        let i = u32::from(*v) - u32::from(PinmuxOutsel::Gpio0Gpio0);
+        let i = output_pin(*v);
         acc | 1u32 << i
     });
     let masked_value = value & mask;
@@ -126,11 +174,11 @@ fn gpio_write(
         } else {
             masked_value
         };
-        GpioSet::write_all(uart, write_val)?;
+        GpioSet::write_all(uart, instance, write_val)?;
         let mut result = 0u32;
         for (k, v) in config.iter() {
             let n = u32::from(transport.gpio_pin(&k.to_string())?.read()?);
-            let i = u32::from(*v) - u32::from(PinmuxOutsel::Gpio0Gpio0);
+            let i = output_pin(*v);
             result |= n << i;
         }
         if invert == 1 {
@@ -146,16 +194,17 @@ fn gpio_write(
 fn gpio_read(
     transport: &TransportWrapper,
     uart: &dyn Uart,
+    instance: u8,
     value: u32,
     config: &HashMap<PinmuxPeripheralIn, PinmuxInsel>,
     invert: u32,
 ) -> Result<()> {
     let mask = if invert == 1 {
         // all 1 for target pins.
-        GpioGet::read_all(uart)?
+        GpioGet::read_all(uart, instance)?
     } else {
         config.keys().fold(0, |acc, k| {
-            let i = u32::from(*k) - u32::from(PinmuxPeripheralIn::Gpio0Gpio0);
+            let i = input_pin(*k);
             acc | 1u32 << i
         })
     };
@@ -173,27 +222,25 @@ fn gpio_read(
         );
     } else {
         for (k, v) in config.iter() {
-            let i = u32::from(*k) - u32::from(PinmuxPeripheralIn::Gpio0Gpio0);
+            let i = input_pin(*k);
             transport
                 .gpio_pin(&v.to_string())?
                 .write(((masked_value >> i) & 1) != invert)?;
         }
         // issue dummy read to make sure write complete.
-        let _ = GpioGet::read_all(uart)?;
+        let _ = GpioGet::read_all(uart, instance)?;
         std::thread::sleep(Duration::from_millis(100));
     }
     Ok(())
 }
 
-fn test_gpio_outputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
+fn test_gpio_outputs(opts: &Opts, transport: &TransportWrapper, instance: u8) -> Result<()> {
     let uart = transport.uart("console")?;
     log::info!(
         "Configuring pinmux for {:?}",
         opts.init.backend_opts.interface
     );
-    let config = CONFIG
-        .get(opts.init.backend_opts.interface.as_str())
-        .expect("interface");
+    let config = get_config(opts, instance);
     PinmuxConfig::configure(&*uart, Some(&config.input), Some(&config.output), None)?;
 
     log::info!("Configuring debugger GPIOs as inputs");
@@ -205,70 +252,68 @@ fn test_gpio_outputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     }
 
     log::info!("Enabling outputs on the DUT");
-    GpioSet::set_input_noise_filter(&*uart, u32::MAX, 1)?;
-    GpioSet::set_enabled_all(&*uart, u32::MAX)?;
+    GpioSet::set_input_noise_filter(&*uart, instance, u32::MAX, 1)?;
+    GpioSet::set_enabled_all(&*uart, instance, u32::MAX)?;
 
     // Output level high test
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "high".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "high".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
     log::info!("test: output level high test");
 
     // Walking 1
     for i in 16..30 {
-        gpio_write(transport, &*uart, 1 << i, &config.output, 0)?;
+        gpio_write(transport, &*uart, instance, 1 << i, &config.output, 0)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Output Rising Edge test
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "rising".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "rising".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
 
     log::info!("test: output rising edge test");
 
     // Walking 1
     for i in 16..30 {
-        gpio_write(transport, &*uart, 1 << i, &config.output, 0)?;
+        gpio_write(transport, &*uart, instance, 1 << i, &config.output, 0)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Output level low test
     log::info!("test: output level low test");
-    GpioSet::write_all(&*uart, u32::MAX)?;
+    GpioSet::write_all(&*uart, instance, u32::MAX)?;
 
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "low".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, 0x1E7E_0000)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "low".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, 0x1E7E_0000)?;
     // Walking 0
     for i in 0..32 {
-        gpio_write(transport, &*uart, 1 << i, &config.output, 1)?;
+        gpio_write(transport, &*uart, instance, 1 << i, &config.output, 1)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Output Falling Edge test
     log::info!("test: output falling edge test");
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "falling".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
-    GpioSet::write_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "falling".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
+    GpioSet::write_all(&*uart, instance, u32::MAX)?;
 
     // Walking 0
     for i in 0..32 {
-        gpio_write(transport, &*uart, 1 << i, &config.output, 1)?;
+        gpio_write(transport, &*uart, instance, 1 << i, &config.output, 1)?;
     }
     Ok(())
 }
 
-fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
+fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper, instance: u8) -> Result<()> {
     let uart = transport.uart("console")?;
     log::info!(
         "Configuring pinmux for {:?}",
         opts.init.backend_opts.interface
     );
-    let config = CONFIG
-        .get(opts.init.backend_opts.interface.as_str())
-        .expect("interface");
+    let config = get_config(opts, instance);
     PinmuxConfig::configure(&*uart, Some(&config.input), None, None)?;
 
     log::info!("Configuring debugger GPIOs as outputs");
@@ -280,8 +325,8 @@ fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     }
 
     log::info!("Disabling outputs on the DUT");
-    GpioSet::set_enabled_all(&*uart, 0x0)?;
-    GpioSet::set_input_noise_filter(&*uart, u32::MAX, 1)?;
+    GpioSet::set_enabled_all(&*uart, instance, 0x0)?;
+    GpioSet::set_input_noise_filter(&*uart, instance, u32::MAX, 1)?;
 
     // Initialize pins to 0
     for pin in config.input.values() {
@@ -290,14 +335,14 @@ fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
 
     // Input level high test
     log::info!("test: input level high test");
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "high".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "high".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
     // Walking 1
     for i in 16..30 {
-        gpio_read(transport, &*uart, 1 << i, &config.input, 0)?;
+        gpio_read(transport, &*uart, instance, 1 << i, &config.input, 0)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Initialize pins to 0
     for pin in config.input.values() {
@@ -305,14 +350,14 @@ fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     }
     // Input Rising Edge test
     log::info!("test: input rising edge test");
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "rising".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "rising".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
     // Walking 1
     for i in 16..30 {
-        gpio_read(transport, &*uart, 1 << i, &config.input, 0)?;
+        gpio_read(transport, &*uart, instance, 1 << i, &config.input, 0)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Initialize pins to 1
     for pin in config.input.values() {
@@ -321,14 +366,14 @@ fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
 
     // Input level low test
     log::info!("test: input level low test");
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "low".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, 0x1E7E_0000)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "low".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, 0x1E7E_0000)?;
     // Walking 0
     for i in 16..30 {
-        gpio_read(transport, &*uart, 1 << i, &config.input, 1)?;
+        gpio_read(transport, &*uart, instance, 1 << i, &config.input, 1)?;
     }
-    GpioSet::irq_disable_all(&*uart, u32::MAX)?;
+    GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
 
     // Initialize pins to 1
     for pin in config.input.values() {
@@ -336,13 +381,13 @@ fn test_gpio_inputs(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     }
     // Input Falling Edge test
     log::info!("test: input falling edge test");
-    GpioSet::irq_set_trigger(&*uart, u32::MAX, "falling".into())?;
-    GpioSet::irq_acknowledge_all(&*uart)?;
-    GpioSet::irq_restore_all(&*uart, u32::MAX)?;
+    GpioSet::irq_set_trigger(&*uart, instance, u32::MAX, "falling".into())?;
+    GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    GpioSet::irq_restore_all(&*uart, instance, u32::MAX)?;
 
     // Walking 0
     for i in 16..30 {
-        gpio_read(transport, &*uart, 1 << i, &config.input, 1)?;
+        gpio_read(transport, &*uart, instance, 1 << i, &config.input, 1)?;
     }
     Ok(())
 }
@@ -356,7 +401,14 @@ fn main() -> Result<()> {
     uart.set_flow_control(true)?;
     let _ = UartConsole::wait_for(&*uart, r"gpio_intr_test ", opts.timeout)?;
 
-    execute_test!(test_gpio_inputs, &opts, &transport);
-    execute_test!(test_gpio_outputs, &opts, &transport);
+    for instance in 0..GPIO_INSTANCES.len() as u8 {
+        log::info!("Testing GPIO instance {instance}");
+        execute_test!(test_gpio_inputs, &opts, &transport, instance);
+        execute_test!(test_gpio_outputs, &opts, &transport, instance);
+        // The pads stay routed to the inputs of this instance, so silence its
+        // interrupts before testing the next instance.
+        GpioSet::irq_disable_all(&*uart, instance, u32::MAX)?;
+        GpioSet::irq_acknowledge_all(&*uart, instance)?;
+    }
     Ok(())
 }
