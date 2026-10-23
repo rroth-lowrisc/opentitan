@@ -305,7 +305,8 @@ See the [UART specification](../../../ip/uart/README.md) for more details on thi
 ##### GPIO
 
 The chip contains two GPIO peripherals (`gpio0` and `gpio1`) that each create 32 bits of bidirectional communication with the outside world via the pinmux.
-Via pinmux any of the 32 pins of either GPIO can be connected to any of the 32 MIO chip pins, in any direction.
+Via pinmux any of the 32 pins of either GPIO can be connected to any of the 47 MIO chip pins, in any direction.
+The 64 GPIO pins share the MIO chip pins with the other muxed peripherals, so not all of them can be connected to chip pins at the same time.
 See the [GPIO specification](../../ip_autogen/gpio/README.md) for more details on this peripheral.
 See the [pinmux specification](../../ip_autogen/pinmux/README.md) for how to connect peripheral IO to chip IO.
 
