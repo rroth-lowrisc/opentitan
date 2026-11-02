@@ -1576,9 +1576,9 @@ end
   ////////////////
 
   `ASSERT_INIT(CreatorRootKeyShare0Size_A,
-               keymgr_dpe_pkg::KeyWidth == CreatorRootKeyShare0Size * 8)
+               keymgr_dpe_pkg::InternalKeyWidth == CreatorRootKeyShare0Size * 8)
   `ASSERT_INIT(CreatorRootKeyShare1Size_A,
-               keymgr_dpe_pkg::KeyWidth == CreatorRootKeyShare1Size * 8)
+               keymgr_dpe_pkg::InternalKeyWidth == CreatorRootKeyShare1Size * 8)
 % if enable_nvm_key:
   `ASSERT_INIT(NvmDataKeySeedSize_A,       NvmKeySeedWidth == NvmDataKeySeedSize * 8)
   `ASSERT_INIT(NvmAddrKeySeedSize_A,       NvmKeySeedWidth == NvmAddrKeySeedSize * 8)
