@@ -46,9 +46,9 @@ package keymgr_dpe_env_pkg;
   //   - ROM digests
   //   - Creator seed (only if boot stage equals two)
   parameter int DvDpeAdvDataWidth = keymgr_dpe_pkg::SwBindingWidth +
-      keymgr_dpe_pkg::KeyWidth + keymgr_dpe_pkg::KeyWidth * (DvBootStages == 2) +
+      keymgr_dpe_pkg::SeedWidth + keymgr_dpe_pkg::SeedWidth * (DvBootStages == 2) +
       lc_ctrl_pkg::LcKeymgrDivWidth + keymgr_dpe_pkg::DeviceIdWidth +
-      keymgr_dpe_pkg::KeyWidth * DvNumRomDigestInputs;
+      keymgr_dpe_pkg::SeedWidth * DvNumRomDigestInputs;
 
   localparam int DvNumInstHwSlotWidth = prim_util_pkg::vbits(DvNumInstHwSlot);
   typedef logic [DvNumInstHwSlotWidth-1:0] dv_keymgr_dpe_slot_idx_e;
@@ -57,11 +57,14 @@ package keymgr_dpe_env_pkg;
   parameter uint NUM_ALERTS = 2;
   parameter string LIST_OF_ALERTS[NUM_ALERTS] = {"recov_operation_err", "fatal_fault_err"};
   parameter uint NUM_EDN = 1;
-  parameter uint DIGEST_SHARE_WORD_NUM = keymgr_dpe_pkg::KeyWidth / TL_DW;
+  parameter uint DIGEST_SHARE_WORD_NUM = keymgr_dpe_pkg::HwKeyWidth / TL_DW;
 
   typedef virtual keymgr_dpe_if keymgr_dpe_vif;
-  typedef bit [keymgr_dpe_pkg::Shares-1:0][keymgr_dpe_pkg::KeyWidth-1:0] key_shares_t;
-  typedef bit [keymgr_dpe_pkg::Shares-1:0][keymgr_dpe_pkg::WideHwKeyWidth-1:0] wide_key_shares_t;
+  typedef bit [keymgr_dpe_pkg::Shares-1:0][keymgr_dpe_pkg::HwKeyWidth-1:0] hw_key_shares_t;
+  typedef bit [keymgr_dpe_pkg::Shares-1:0][keymgr_dpe_pkg::InternalKeyWidth-1:0]
+      internal_key_shares_t;
+  typedef bit [keymgr_dpe_pkg::Shares-1:0][keymgr_dpe_pkg::WideHwKeyWidth-1:0]
+      wide_hw_key_shares_t;
   typedef bit [keymgr_dpe_pkg::Shares-1:0][kmac_pkg::AppDigestW-1:0] kmac_digests_t;
   typedef enum {
     IntrOpDone,
