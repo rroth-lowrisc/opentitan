@@ -54,7 +54,8 @@ At the end of a successful operation, the slot selected by `SLOT_DST_SEL` is loa
 *  Its `key_policy` is updated with `SLOT_POLICY`.
 *  `max_key_version` is updated with `MAX_KEY_VERSION`.
 *  `boot_stage` is set to the parent’s `boot_stage + 1`
-*  `key` is updated from the digest received from KMAC (after truncating to 256-bit).
+*  `key` is updated from the digest received from the KDF engine (after truncating the 512-bit KMAC digest to the 384-bit slot key size).
+   Note that the slot key is 384-bit wide, but if KMAC is the KDF engine, only its lower 256 bits are used as the KMAC key in following operations.
 
 The slot `SLOT_SRC_SEL` remains unmodified (unless `SLOT_SRC_SEL = SLOT_DST_SEL` required by `retain_parent = false`).
 
