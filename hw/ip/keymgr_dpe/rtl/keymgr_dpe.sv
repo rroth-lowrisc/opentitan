@@ -912,7 +912,7 @@ module keymgr_dpe
     .fsm_err_o(sideload_fsm_err)
   );
 
-  for (genvar i = 0; i < 8; i++) begin : gen_sw_assigns
+  for (genvar i = 0; i < NumOutReg; i++) begin : gen_sw_assigns
 
     mubi4_t [1:0] hw_key_sel_buf;
     prim_mubi4_sync #(
