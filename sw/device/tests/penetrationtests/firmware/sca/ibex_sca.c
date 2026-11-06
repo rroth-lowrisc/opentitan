@@ -4,6 +4,9 @@
 
 #include "sw/device/tests/penetrationtests/firmware/sca/ibex_sca.h"
 
+#include <assert.h>
+
+#include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/base/status.h"
 #include "sw/device/lib/crypto/drivers/otbn.h"
@@ -486,7 +489,9 @@ status_t handle_ibex_sca_key_sideloading(ujson_t *uj) {
 
   // Acknowledge test.
   ibex_sca_key_t uj_key;
-  for (int i = 0; i < 12; i++) {
+  static_assert(ARRAYSIZE(uj_key.share0) == ARRAYSIZE(key.value[0]),
+                "ujson key share size must match the keymgr_dpe output.");
+  for (size_t i = 0; i < ARRAYSIZE(uj_key.share0); i++) {
     uj_key.share0[i] = key.value[0][i];
     uj_key.share1[i] = key.value[1][i];
   }

@@ -108,10 +108,21 @@ TEST(Keyblob, ShareNumWordsOddNonHmacRejected) {
   odd_aes.key_length = 31;
   EXPECT_EQ(keyblob_share_num_words(odd_aes), 0);
 
-  // Sideloaded symmetric keys not equal to 256 bits (32 bytes) must return 0.
+  // Sideloaded symmetric keys not equal to the 256-bit (32-byte) sideload key
+  // size must return 0.
   otcrypto_key_config_t bad_sideload = kConfigCtrSideloaded;
   bad_sideload.key_length = 16;
   EXPECT_EQ(keyblob_share_num_words(bad_sideload), 0);
+}
+
+TEST(Keyblob, ShareNumWordsSideloadSize) {
+  // The sideload key size is independent of the (wider) SW output size.
+  EXPECT_EQ(keyblob_share_num_words(kConfigCtrSideloaded),
+            static_cast<size_t>(kKeymgrDPESideloadKeyNumWords));
+
+  otcrypto_key_config_t sw_output_sized = kConfigCtrSideloaded;
+  sw_output_sized.key_length = kKeymgrDPEOutputShareNumWords * sizeof(uint32_t);
+  EXPECT_EQ(keyblob_share_num_words(sw_output_sized), 0);
 }
 
 TEST(Keyblob, ShareNumWordsHuge) {
@@ -483,6 +494,48 @@ TEST(Keyblob, ToKeymgrDpeDiversificationNegative) {
   EXPECT_NOT_OK(keyblob_to_keymgr_dpe_diversification(&key_bad_length, &div));
   EXPECT_NOT_OK(
       keyblob_to_keymgr_dpe_attestation_diversification(&key_bad_length, &div));
+}
+
+TEST(Keyblob, ToKeymgrDpeDiversificationSwOutputHandle) {
+  keymgr_dpe_diversification_t div;
+  uint32_t keyblob[kSwKeyblobHwBackedWords] = {0};
+  otcrypto_key_config_t sw_config = kConfigCtrSideloaded;
+  sw_config.key_length = kKeymgrDPEOutputShareNumWords * sizeof(uint32_t);
+
+  // A SW output handle with a key length matching the SW output is accepted.
+  otcrypto_blinded_key_t sw_key = {
+      .config = sw_config,
+      .keyblob_length = kSwKeyblobHwBackedBytes,
+      .keyblob = keyblob,
+      .checksum = 0,
+  };
+  EXPECT_OK(keyblob_to_keymgr_dpe_diversification(&sw_key, &div));
+  EXPECT_OK(keyblob_to_keymgr_dpe_attestation_diversification(&sw_key, &div));
+
+  // A SW output handle with the sideload key length is rejected.
+  otcrypto_blinded_key_t sw_handle_sideload_len = {
+      .config = kConfigCtrSideloaded,
+      .keyblob_length = kSwKeyblobHwBackedBytes,
+      .keyblob = keyblob,
+      .checksum = 0,
+  };
+  EXPECT_NOT_OK(
+      keyblob_to_keymgr_dpe_diversification(&sw_handle_sideload_len, &div));
+  EXPECT_NOT_OK(keyblob_to_keymgr_dpe_attestation_diversification(
+      &sw_handle_sideload_len, &div));
+
+  // A sideload handle with the SW output key length is rejected.
+  otcrypto_blinded_key_t sideload_handle_sw_len = {
+      .config = sw_config,
+      .keyblob_length = kKeyblobHwBackedBytes,
+      .keyblob = keyblob,
+      .checksum = 0,
+  };
+  EXPECT_NOT_OK(
+      keyblob_to_keymgr_dpe_diversification(&sideload_handle_sw_len, &div));
+  sideload_handle_sw_len.keyblob_length = kCdiKeyblobHwBackedBytes;
+  EXPECT_NOT_OK(keyblob_to_keymgr_dpe_attestation_diversification(
+      &sideload_handle_sw_len, &div));
 }
 
 TEST(Keyblob, EnsureXorMaskedNegative) {

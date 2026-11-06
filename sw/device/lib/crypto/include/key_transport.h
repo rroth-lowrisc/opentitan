@@ -64,9 +64,9 @@ otcrypto_status_t otcrypto_symmetric_keygen(
  *
  * The caller should partially populate the blinded key struct; they should set
  * the full key configuration and the keyblob length (32 bytes for sideloaded
- * keys, or 64 bytes if the key will be passed to `ot_crypto_hw_backed_keygen`),
- * and then allocate that amount of space for the keyblob and set the keyblob
- * pointer.
+ * keys, or 96 bytes if the key will be passed to `ot_crypto_hw_backed_keygen`,
+ * in which case the key length must be 384 bits), and then allocate that
+ * amount of space for the keyblob and set the keyblob pointer.
  *
  * This function will populate the `checksum` field and copy the salt/version
  * data into the keyblob buffer in the specific order that the rest of

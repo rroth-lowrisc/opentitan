@@ -206,6 +206,7 @@ cc_library(
     srcs = ["ibex_sca.c"],
     hdrs = ["ibex_sca.h"],
     deps = [
+        "//sw/device/lib/base:macros",
         "//sw/device/lib/base:memory",
         "//sw/device/lib/base:status",
         "//sw/device/lib/crypto/drivers:otbn",

@@ -22,9 +22,16 @@ enum {
    */
   kKeymgrDPESaltNumWords = 8,
   /**
-   * Number of 32-bit words for each output key share.
+   * Number of 32-bit words for each software-visible output key share.
    */
   kKeymgrDPEOutputShareNumWords = 12,
+  /**
+   * Number of 32-bit words of a key sideloaded to AES or KMAC (256 bits).
+   *
+   * HMAC and OTBN receive 512-bit wide sideload keys and are not covered by
+   * this constant.
+   */
+  kKeymgrDPESideloadKeyNumWords = 8,
 };
 
 /**
@@ -48,7 +55,7 @@ typedef struct keymgr_dpe_diversification {
 /**
  * Generated key from keymgr dpe.
  *
- * The output key material is 256 bits, generated in two shares.
+ * The output key material is 384 bits, generated in two shares.
  */
 typedef struct keymgr_dpe_output {
   uint32_t share0[kKeymgrDPEOutputShareNumWords];

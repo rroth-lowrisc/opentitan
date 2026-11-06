@@ -154,13 +154,23 @@ otcrypto_status_t ot_crypto_hw_backed_keygen(hardened_bool_t attestation,
     return OTCRYPTO_BAD_ARGS;
   }
 
-  // Ensure the allocated share size and keyblob length match the key manager
-  // output.
-  size_t share_words = launder32(keyblob_share_num_words(key->config));
-  if (share_words != kKeymgrDPEOutputShareNumWords ||
-      key->keyblob_length != kSwKeyblobHwBackedBytes) {
+  // Ensure the key length, the share size of the resulting software key and
+  // the keyblob length match the key manager output. The share size is
+  // computed on the morphed (software) configuration, which rejects key types
+  // with redundant share bits (e.g. ECC).
+  otcrypto_key_config_t sw_config = key->config;
+  sw_config.hw_backed = kHardenedBoolFalse;
+  if (launder32(key->config.key_length) !=
+          kKeymgrDPEOutputShareNumWords * sizeof(uint32_t) ||
+      launder32(keyblob_share_num_words(sw_config)) !=
+          kKeymgrDPEOutputShareNumWords ||
+      launder32(key->keyblob_length) != kSwKeyblobHwBackedBytes) {
     return OTCRYPTO_BAD_ARGS;
   }
+  HARDENED_CHECK_EQ(key->config.key_length,
+                    kKeymgrDPEOutputShareNumWords * sizeof(uint32_t));
+  HARDENED_CHECK_EQ(key->keyblob_length, kSwKeyblobHwBackedBytes);
+  size_t share_words = kKeymgrDPEOutputShareNumWords;
 
   // Extract the diversification data.
   keymgr_dpe_diversification_t diversification;

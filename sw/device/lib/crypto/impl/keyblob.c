@@ -58,7 +58,7 @@ size_t keyblob_share_num_words(const otcrypto_key_config_t config) {
   if (launder32(config.hw_backed) == kHardenedBoolTrue &&
       launder32(key_type) != kOtcryptoKeyTypeEcc &&
       launder32(len_bytes) !=
-          kKeymgrDPEOutputShareNumWords * sizeof(uint32_t)) {
+          kKeymgrDPESideloadKeyNumWords * sizeof(uint32_t)) {
     return 0;
   }
   if (launder32(key_type) == kOtcryptoKeyTypeHmac ||
@@ -160,6 +160,41 @@ status_t keyblob_buffer_to_keymgr_dpe_diversification(
   return OTCRYPTO_OK;
 }
 
+/**
+ * Check the key and keyblob lengths of a hardware-backed key handle.
+ *
+ * A handle of `sideload_handle_bytes` describes a sideloaded key and must
+ * satisfy the sideload length rules of `keyblob_share_num_words`. A handle of
+ * `kSwKeyblobHwBackedBytes` describes a key that is read out by software via
+ * `ot_crypto_hw_backed_keygen`, and its key length must match the key manager
+ * software output exactly.
+ *
+ * @param key Hardware-backed blinded key.
+ * @param sideload_handle_bytes Expected keyblob length of a sideload handle.
+ * @returns OK if the lengths are consistent, BAD_ARGS otherwise.
+ */
+static status_t hw_backed_handle_length_check(const otcrypto_blinded_key_t *key,
+                                              size_t sideload_handle_bytes) {
+  if (launder32(key->keyblob_length) == sideload_handle_bytes) {
+    HARDENED_CHECK_EQ(key->keyblob_length, sideload_handle_bytes);
+    if (launder32(keyblob_share_num_words(key->config)) == 0) {
+      return OTCRYPTO_BAD_ARGS;
+    }
+    return OTCRYPTO_OK;
+  }
+  if (launder32(key->keyblob_length) == kSwKeyblobHwBackedBytes) {
+    HARDENED_CHECK_EQ(key->keyblob_length, kSwKeyblobHwBackedBytes);
+    if (launder32(key->config.key_length) !=
+        kKeymgrDPEOutputShareNumWords * sizeof(uint32_t)) {
+      return OTCRYPTO_BAD_ARGS;
+    }
+    HARDENED_CHECK_EQ(key->config.key_length,
+                      kKeymgrDPEOutputShareNumWords * sizeof(uint32_t));
+    return OTCRYPTO_OK;
+  }
+  return OTCRYPTO_BAD_ARGS;
+}
+
 status_t keyblob_to_keymgr_dpe_diversification(
     const otcrypto_blinded_key_t *key,
     keymgr_dpe_diversification_t *diversification) {
@@ -173,11 +208,7 @@ status_t keyblob_to_keymgr_dpe_diversification(
   }
   HARDENED_CHECK_EQ(key->config.hw_backed, kHardenedBoolTrue);
 
-  if (launder32(keyblob_share_num_words(key->config)) == 0 ||
-      (key->keyblob_length != kKeyblobHwBackedBytes &&
-       key->keyblob_length != kSwKeyblobHwBackedBytes)) {
-    return OTCRYPTO_BAD_ARGS;
-  }
+  HARDENED_TRY(hw_backed_handle_length_check(key, kKeyblobHwBackedBytes));
 
   return keyblob_buffer_to_keymgr_dpe_diversification(
       key->keyblob, key->config.keymgr_dpe_slot_idx, key->config.key_mode,
@@ -197,11 +228,7 @@ status_t keyblob_to_keymgr_dpe_attestation_diversification(
   }
   HARDENED_CHECK_EQ(key->config.hw_backed, kHardenedBoolTrue);
 
-  if (launder32(keyblob_share_num_words(key->config)) == 0 ||
-      (key->keyblob_length != kCdiKeyblobHwBackedBytes &&
-       key->keyblob_length != kSwKeyblobHwBackedBytes)) {
-    return OTCRYPTO_BAD_ARGS;
-  }
+  HARDENED_TRY(hw_backed_handle_length_check(key, kCdiKeyblobHwBackedBytes));
 
   diversification->version = launder32(key->keyblob[0]);
 
