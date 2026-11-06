@@ -72,20 +72,20 @@ module keymgr_dpe_ctrl
   // goes to sideload port. The safe default here is software CSR key.
   output prim_mubi_pkg::mubi4_t hw_sel_o,
 
-  // KMAC ctrl interface
+  // KDF ctrl interface
   output logic adv_en_o,
   output logic gen_en_o,
   output hw_key_req_t key_o,
   output keymgr_dpe_slot_t active_key_slot_o,
   output invalid_advance_o,
 
-  input kmac_done_i,
-  input kmac_input_invalid_i, // asserted when selected data fails criteria check
-  input kmac_fsm_err_i, // asserted when kmac fsm reaches unexpected state
-  input kmac_op_err_i,  // asserted when kmac itself reports an error
-  input kmac_done_err_i,// asserted when kmac unexpectedly toggles done
-  input kmac_cmd_err_i, // asserted when more than one command given to kmac
-  input [Shares-1:0][KeyWidth-1:0] kmac_data_i,
+  input kdf_done_i,
+  input kdf_input_invalid_i, // asserted when selected data fails criteria check
+  input kdf_fsm_err_i, // asserted when KDF interface fsm reaches unexpected state
+  input kdf_op_err_i,  // asserted when the KDF engine itself reports an error
+  input kdf_done_err_i,// asserted when the KDF unexpectedly toggles done
+  input kdf_cmd_err_i, // asserted when more than one command given to the KDF interface
+  input [Shares-1:0][KeyWidth-1:0] kdf_data_i,
 
   // prng control interface
   input [Shares-1:0][RandWidth-1:0] entropy_i,
@@ -129,7 +129,7 @@ module keymgr_dpe_ctrl
   keymgr_dpe_slot_t [NumInstHwSlot-1:0] key_slots_d;
 
   // error conditions
-  logic invalid_kmac_out;
+  logic invalid_kdf_out;
   logic invalid_op;
   logic cnt_err;
   // states fall out of sparsely encoded range
@@ -190,11 +190,11 @@ module keymgr_dpe_ctrl
   assign unlock_after_advance_o = adv_req & op_ack & ~(op_err | op_fault_err);
 
   // error definition
-  // check incoming kmac data validity
-  // Only check during the periods when there is actual kmac output
-  assign invalid_kmac_out = (op_update | op_ack) & kmac_done_i &
-                            (~valid_data_chk(kmac_data_i[0]) |
-                            ~valid_data_chk(kmac_data_i[1]));
+  // check incoming KDF data validity
+  // Only check during the periods when there is actual KDF output
+  assign invalid_kdf_out = (op_update | op_ack) & kdf_done_i &
+                            (~valid_data_chk(kdf_data_i[0]) |
+                            ~valid_data_chk(kdf_data_i[1]));
 
   // async errors have nothing to do with the operation and thus should not
   // impact operation results.
@@ -368,7 +368,7 @@ module keymgr_dpe_ctrl
       SlotLoadFromKmac: begin
         // Again the following check should go to FSM not this MUX!
         key_slots_d[slot_dst_sel_i].valid = 1;
-        key_slots_d[slot_dst_sel_i].key = kmac_data_i;
+        key_slots_d[slot_dst_sel_i].key = kdf_data_i;
         key_slots_d[slot_dst_sel_i].max_key_version = max_key_version_i;
         key_slots_d[slot_dst_sel_i].boot_stage = next_boot_stage;
         key_slots_d[slot_dst_sel_i].key_policy = slot_policy_i;
@@ -679,14 +679,14 @@ module keymgr_dpe_ctrl
     .op_ack_o(op_ack),
     .op_busy_o(op_busy),
     .op_update_o(op_update),
-    .kmac_done_i,
+    .kdf_done_i,
     .adv_en_o,
     .gen_en_o,
     .op_fsm_err_o(op_fsm_err)
   );
 
   ///////////////////////////////
-  // Suppress kmac return data
+  // Suppress KDF return data
   ///////////////////////////////
 
   logic data_fsm_err;
@@ -789,14 +789,14 @@ module keymgr_dpe_ctrl
     // because this case is handled through `invalid_op` variable.
     .disabled_i(fsm_at_disabled),
     .invalid_i(fsm_at_invalid),
-    .kmac_input_invalid_i,
+    .kdf_input_invalid_i,
     .shadowed_update_err_i,
-    .kmac_op_err_i,
-    .invalid_kmac_out_i(invalid_kmac_out),
+    .kdf_op_err_i,
+    .invalid_kdf_out_i(invalid_kdf_out),
     .sideload_sel_err_i,
-    .kmac_cmd_err_i,
-    .kmac_fsm_err_i,
-    .kmac_done_err_i,
+    .kdf_cmd_err_i,
+    .kdf_fsm_err_i,
+    .kdf_done_err_i,
     .regfile_intg_err_i,
     .shadowed_storage_err_i,
     .ctrl_fsm_err_i(state_intg_err_q | state_intg_err_d),

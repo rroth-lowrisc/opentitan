@@ -104,7 +104,7 @@ module keymgr_dpe
       lc_ctrl_pkg::LcKeymgrDivWidth + KeyWidth * NumRomDigestInputs +
       KeyWidth * (NumBootStages == 2);
 
-  // Determine the width of the data consumed by the KMAC IF during the inital
+  // Determine the width of the data consumed by the KDF IF during the initial
   // derivation of the CreatorRootKey.
   `ASSERT_INIT(DpeAdvDataWidth_A, DpeAdvDataWidth <= KDFMaxWidth)
   `ASSERT_INIT(GenDataWidth_A, GenDataWidth <= KDFMaxWidth)
@@ -280,14 +280,14 @@ module keymgr_dpe
   logic data_valid;
   logic data_hw_en;
   logic data_sw_en;
-  logic kmac_done;
-  logic kmac_input_invalid;
-  logic kmac_cmd_err;
-  logic kmac_fsm_err;
-  logic kmac_op_err;
-  logic kmac_done_err;
-  logic [Shares-1:0][kmac_pkg::AppDigestW-1:0] kmac_data;
-  logic [Shares-1:0][KeyWidth-1:0] kmac_data_truncated;
+  logic kdf_done;
+  logic kdf_input_invalid;
+  logic kdf_cmd_err;
+  logic kdf_fsm_err;
+  logic kdf_op_err;
+  logic kdf_done_err;
+  logic [Shares-1:0][kmac_pkg::AppDigestW-1:0] kdf_data;
+  logic [Shares-1:0][KeyWidth-1:0] kdf_data_truncated;
   logic [ErrLastPos-1:0] err_code;
   logic [FaultLastPos-1:0] fault_code;
   logic unlock_after_advance;
@@ -321,7 +321,7 @@ module keymgr_dpe
   end
 
   for (genvar i = 0; i < Shares; i++) begin : gen_truncate_data
-    assign kmac_data_truncated[i] = kmac_data[i][KeyWidth-1:0];
+    assign kdf_data_truncated[i] = kdf_data[i][KeyWidth-1:0];
   end
 
   hw_key_req_t root_key;
@@ -436,13 +436,13 @@ module keymgr_dpe
     .key_o(kmac_key),
     .active_key_slot_o(active_key_slot),
     .invalid_advance_o(invalid_advance),
-    .kmac_done_i(kmac_done),
-    .kmac_input_invalid_i(kmac_input_invalid),
-    .kmac_fsm_err_i(kmac_fsm_err),
-    .kmac_op_err_i(kmac_op_err),
-    .kmac_done_err_i(kmac_done_err),
-    .kmac_cmd_err_i(kmac_cmd_err),
-    .kmac_data_i(kmac_data_truncated),
+    .kdf_done_i(kdf_done),
+    .kdf_input_invalid_i(kdf_input_invalid),
+    .kdf_fsm_err_i(kdf_fsm_err),
+    .kdf_op_err_i(kdf_op_err),
+    .kdf_done_err_i(kdf_done_err),
+    .kdf_cmd_err_i(kdf_cmd_err),
+    .kdf_data_i(kdf_data_truncated),
     .dest_sel_oob_i(dest_sel_oob),
     .slot_src_sel_oob_i(slot_src_sel_oob),
     .slot_dst_sel_oob_i(slot_dst_sel_oob)
@@ -804,34 +804,34 @@ module keymgr_dpe
                   OpDpeLoadSecondaryRootKey);
 
   /////////////////////////////////////
-  //  KMAC Control
+  //  KDF Control
   /////////////////////////////////////
 
   // Intermediate signal to multiplex either otbn or kmac as KDF
-  kmac_pkg::app_req_t kmac_app_req;
-  kmac_pkg::app_rsp_t kmac_app_rsp;
+  kmac_pkg::app_req_t kdf_app_req;
+  kmac_pkg::app_rsp_t kdf_app_rsp;
 
-  // `invalid_data` only checks key and message data that goes into KMAC interface is valid.
+  // `invalid_data` only checks if key and message data that goes into the KDF interface is valid.
   // It does not check the validity of the requested operation, with respect to other inputs
   // such as policy violation etc.
   // This vector is indexed by keymgr_dpe_ops_e. The OpDpeErase entry is unused, since erase
-  // does not use the KMAC interface.
-  // TODO(#31420): give the KMAC interface its own 3-entry index instead of reusing the legacy
+  // does not use the KDF interface.
+  // TODO(#31420): give the KDF interface its own 3-entry index instead of reusing the legacy
   // keymgr operation encoding, and drop the dead identity-generation path.
   logic [3:0] invalid_data;
   assign invalid_data[OpDpeAdvance] = ~key_vld | invalid_advance |
                                       ~adv_dvalid[active_key_slot.boot_stage];
-  // OpDpeErase does not use KMAC, so this is a don't-care; assign it to 0 for lint.
+  // OpDpeErase does not use the KDF interface, so this is a don't-care; assign it to 0 for lint.
   assign invalid_data[OpDpeErase] = 1'b0;
   assign invalid_data[OpDpeGenSwOut] = ~key_vld | ~key_version_vld;
   assign invalid_data[OpDpeGenHwOut] = ~key_vld | ~key_version_vld;
 
   // Keymgr DPE does not have id generation, so assign '0 to `id_en`
   assign id_en = 1'b0;
-  keymgr_dpe_kmac_if #(
+  keymgr_dpe_kdf_if #(
     .RndCnstRandPerm(RndCnstRandPerm),
     .MaxAdvDataWidth(DpeAdvDataWidth)
-  ) u_kmac_if (
+  ) u_kdf_if (
     .clk_i,
     .rst_ni,
     .prng_en_o(data_lfsr_en),
@@ -841,19 +841,19 @@ module keymgr_dpe
     .id_data_i('0),
     .gen_data_i(gen_in),
     .inputs_invalid_i(invalid_data),
-    .inputs_invalid_o(kmac_input_invalid),
+    .inputs_invalid_o(kdf_input_invalid),
     .adv_en_i(adv_en),
     .id_en_i(id_en),
     .gen_en_i(gen_en),
-    .done_o(kmac_done),
-    .data_o(kmac_data),
-    .kmac_data_o(kmac_app_req),
-    .kmac_data_i(kmac_app_rsp),
+    .done_o(kdf_done),
+    .data_o(kdf_data),
+    .kdf_data_o(kdf_app_req),
+    .kdf_data_i(kdf_app_rsp),
     .entropy_i(data_rand),
-    .fsm_error_o(kmac_fsm_err),
-    .kmac_error_o(kmac_op_err),
-    .kmac_done_error_o(kmac_done_err),
-    .cmd_error_o(kmac_cmd_err)
+    .fsm_error_o(kdf_fsm_err),
+    .kdf_error_o(kdf_op_err),
+    .kdf_done_error_o(kdf_done_err),
+    .cmd_error_o(kdf_cmd_err)
   );
 
   /////////////////////////////////////
@@ -890,11 +890,11 @@ module keymgr_dpe
 
   // If the OTBN can be used as KDF (indicated by `KdfEngineSel`) then the KMAC
   // interface is muxed between the KMAC and the OTBN.
-  assign kmac_app_rsp = mubi4_test_true_strict(locked_kdf_selection_q) ? otbn_app_i : kmac_app_i;
+  assign kdf_app_rsp = mubi4_test_true_strict(locked_kdf_selection_q) ? otbn_app_i : kmac_app_i;
   assign kmac_app_o   = mubi4_test_true_strict(locked_kdf_selection_q) ?
-      kmac_pkg::APP_REQ_DEFAULT : kmac_app_req;
+      kmac_pkg::APP_REQ_DEFAULT : kdf_app_req;
   assign otbn_app_o   = mubi4_test_true_strict(locked_kdf_selection_q) ?
-      kmac_app_req : kmac_pkg::APP_REQ_DEFAULT;
+      kdf_app_req : kmac_pkg::APP_REQ_DEFAULT;
 
   // The `sensitive_key_o` is true if:
   // - `locked_kdf_selection_q` indicates OTBN as KDF
@@ -924,7 +924,7 @@ module keymgr_dpe
     .data_en_i(data_hw_en),
     .data_valid_i(data_valid),
     .key_i(kmac_key),
-    .data_i(kmac_data),
+    .data_i(kdf_data),
     .prng_en_o(sideload_lfsr_en),
     .aes_key_o,
     .otbn_key_o,
@@ -951,14 +951,14 @@ module keymgr_dpe
     prim_sec_anchor_buf #(
      .Width(32)
     ) u_prim_buf_share0_d (
-      .in_i(~data_sw_en | wipe_key ? data_rand[0] : kmac_data[0][i*32 +: 32]),
+      .in_i(~data_sw_en | wipe_key ? data_rand[0] : kdf_data[0][i*32 +: 32]),
       .out_o(hw2reg.sw_share0_output[i].d)
     );
 
     prim_sec_anchor_buf #(
      .Width(32)
     ) u_prim_buf_share1_d (
-      .in_i(~data_sw_en | wipe_key ? data_rand[1] : kmac_data[1][i*32 +: 32]),
+      .in_i(~data_sw_en | wipe_key ? data_rand[1] : kdf_data[1][i*32 +: 32]),
       .out_o(hw2reg.sw_share1_output[i].d)
     );
 
@@ -1143,7 +1143,7 @@ module keymgr_dpe
   `ASSERT_INIT(ErrCntMatch_A, ErrLastPos == AsyncErrLastIdx + SyncErrLastIdx)
 
   `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(CtrlCntAlertCheck_A, u_ctrl.u_cnt, alert_tx_o[1])
-  `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(KmacIfCntAlertCheck_A, u_kmac_if.u_cnt, alert_tx_o[1])
+  `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(KdfIfCntAlertCheck_A, u_kdf_if.u_cnt, alert_tx_o[1])
   `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(ReseedCtrlCntAlertCheck_A, u_reseed_ctrl.u_reseed_cnt,
                                          alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CtrlMainFsmCheck_A, u_ctrl.u_state_regs, alert_tx_o[1])
@@ -1151,7 +1151,7 @@ module keymgr_dpe
       u_ctrl.u_data_en.u_state_regs, alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CtrlOpFsmCheck_A,
       u_ctrl.u_op_state.u_state_regs, alert_tx_o[1])
-  `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(KmacIfFsmCheck_A, u_kmac_if.u_state_regs, alert_tx_o[1])
+  `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(KdfIfFsmCheck_A, u_kdf_if.u_state_regs, alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(SideloadCtrlFsmCheck_A,
       u_sideload_ctrl.u_state_regs, alert_tx_o[1])
 

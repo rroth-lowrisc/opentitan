@@ -17,14 +17,14 @@ module keymgr_dpe_err
   input invalid_op_i,
   input disabled_i,
   input invalid_i,
-  input kmac_input_invalid_i,
+  input kdf_input_invalid_i,
   input shadowed_update_err_i,
-  input kmac_op_err_i,
-  input invalid_kmac_out_i,
+  input kdf_op_err_i,
+  input invalid_kdf_out_i,
   input sideload_sel_err_i,
-  input kmac_cmd_err_i,
-  input kmac_fsm_err_i,
-  input kmac_done_err_i,
+  input kdf_cmd_err_i,
+  input kdf_fsm_err_i,
+  input kdf_done_err_i,
   input regfile_intg_err_i,
   input shadowed_storage_err_i,
   input ctrl_fsm_err_i,
@@ -55,7 +55,7 @@ module keymgr_dpe_err
   output logic [FaultLastPos-1:0] fault_o
 );
 
-  // Advance calls are made up of multiple rounds of kmac operations.
+  // Advance calls are made up of multiple rounds of KDF operations.
   // Any sync error that occurs is treated as an error of the entire call.
   // Therefore sync errors that happen before the end of the call must be
   // latched.
@@ -72,7 +72,7 @@ module keymgr_dpe_err
                                                    disabled_i |
                                                    invalid_i |
                                                    (|fault_o));
-  assign sync_err_d[SyncErrInvalidIn] = err_vld & kmac_input_invalid_i;
+  assign sync_err_d[SyncErrInvalidIn] = err_vld & kdf_input_invalid_i;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -89,8 +89,8 @@ module keymgr_dpe_err
   assign async_err_o[AsyncErrShadowUpdate] = shadowed_update_err_i;
 
   // sync faults
-  assign sync_fault_d[SyncFaultKmacOp] = err_vld & kmac_op_err_i;
-  assign sync_fault_d[SyncFaultKmacOut] = err_vld & invalid_kmac_out_i;
+  assign sync_fault_d[SyncFaultKmacOp] = err_vld & kdf_op_err_i;
+  assign sync_fault_d[SyncFaultKmacOut] = err_vld & invalid_kdf_out_i;
   assign sync_fault_d[SyncFaultSideSel] = err_vld & sideload_sel_err_i;
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -113,9 +113,9 @@ module keymgr_dpe_err
     end
   end
   assign async_fault_o = async_fault_q | async_fault_d;
-  assign async_fault_d[AsyncFaultKmacCmd]  = kmac_cmd_err_i;
-  assign async_fault_d[AsyncFaultKmacFsm]  = kmac_fsm_err_i;
-  assign async_fault_d[AsyncFaultKmacDone] = kmac_done_err_i;
+  assign async_fault_d[AsyncFaultKmacCmd]  = kdf_cmd_err_i;
+  assign async_fault_d[AsyncFaultKmacFsm]  = kdf_fsm_err_i;
+  assign async_fault_d[AsyncFaultKmacDone] = kdf_done_err_i;
   assign async_fault_d[AsyncFaultRegIntg]  = regfile_intg_err_i;
   assign async_fault_d[AsyncFaultShadow ]  = shadowed_storage_err_i;
   assign async_fault_d[AsyncFaultFsmIntg]  = ctrl_fsm_err_i | data_fsm_err_i | op_fsm_err_i;
@@ -127,7 +127,7 @@ module keymgr_dpe_err
   assign async_fault_d[AsyncFaultRCntErr]  = reseed_cnt_err_i;
   assign async_fault_d[AsyncFaultSideErr]  = sideload_fsm_err_i;
 
-  // certain errors/faults can only happen when there's an actual kmac transaction,
+  // certain errors/faults can only happen when there's an actual KDF transaction,
   // others can happen with or without.
   assign error_o[ErrInvalidOp]    = op_done_i & sync_err_o[SyncErrInvalidOp];
   assign error_o[ErrInvalidIn]    = op_done_i & sync_err_o[SyncErrInvalidIn];

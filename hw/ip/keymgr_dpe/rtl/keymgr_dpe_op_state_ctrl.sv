@@ -27,7 +27,7 @@ module keymgr_dpe_op_state_ctrl
   // `op_update_o` signals to the keygmr slot MUX that destination slot needs to be updated
   output logic op_update_o,
 
-  input kmac_done_i,
+  input kdf_done_i,
   output logic adv_en_o,
   output logic gen_en_o,
 
@@ -76,7 +76,7 @@ module keymgr_dpe_op_state_ctrl
     op_ack_o = 1'b0;
     op_busy_o = 1'b0;
 
-    // output to kmac interface
+    // output to KDF interface
     adv_en_o = 1'b0;
 
     gen_en = 1'b0;
@@ -109,7 +109,7 @@ module keymgr_dpe_op_state_ctrl
         adv_en_o = 1'b1;
         op_busy_o = 1'b1;
 
-        if (kmac_done_i) begin
+        if (kdf_done_i) begin
           op_ack_o = 1'b1;
           op_update_o = 1'b1;
           state_d = StIdle;
@@ -121,7 +121,7 @@ module keymgr_dpe_op_state_ctrl
         gen_en = 1'b1;
         op_busy_o = 1'b1;
 
-        if (kmac_done_i) begin
+        if (kdf_done_i) begin
           op_ack_o = 1'b1;
           state_d = StIdle;
         end

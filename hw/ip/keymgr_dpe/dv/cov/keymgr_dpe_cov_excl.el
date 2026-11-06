@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ANNOTATION: "[LOWRISK] non-idle -> error"
-INSTANCE: tb.dut.u_kmac_if
+INSTANCE: tb.dut.u_kdf_if
 Fsm state_q "3597806508"
 Transition StTxLast->StError "320->238"
 Fsm state_q "3597806508"

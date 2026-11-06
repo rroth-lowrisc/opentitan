@@ -2,12 +2,12 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Key manager dpe interface to kmac
+// Key manager DPE interface to the KDF engine (KMAC or OTBN)
 //
 
 `include "prim_assert.sv"
 
-module keymgr_dpe_kmac_if
+module keymgr_dpe_kdf_if
   import keymgr_dpe_pkg::*;
 #(
   parameter rand_perm_t RndCnstRandPerm = RndCnstRandPermDefault,
@@ -30,9 +30,9 @@ module keymgr_dpe_kmac_if
   output logic done_o,
   output logic [Shares-1:0][kmac_pkg::AppDigestW-1:0] data_o,
 
-  // actual connection to kmac
-  output kmac_pkg::app_req_t kmac_data_o,
-  input  kmac_pkg::app_rsp_t kmac_data_i,
+  // connection to the KDF engine (KMAC or OTBN app interface)
+  output kmac_pkg::app_req_t kdf_data_o,
+  input  kmac_pkg::app_rsp_t kdf_data_i,
 
   // entropy input
   output logic prng_en_o,
@@ -40,8 +40,8 @@ module keymgr_dpe_kmac_if
 
   // error outputs
   output logic fsm_error_o,
-  output logic kmac_error_o,
-  output logic kmac_done_error_o,
+  output logic kdf_error_o,
+  output logic kdf_done_error_o,
   output logic cmd_error_o
 );
 
@@ -71,8 +71,8 @@ module keymgr_dpe_kmac_if
   // Minimum Hamming weight: 2
   // Maximum Hamming weight: 9
   //
-  localparam int KmacIfStateWidth = 10;
-  typedef enum logic [KmacIfStateWidth-1:0] {
+  localparam int KdfIfStateWidth = 10;
+  typedef enum logic [KdfIfStateWidth-1:0] {
     StIdle    = 10'b1110100010,
     StTx      = 10'b0010011011,
     StTxLast  = 10'b0101000000,
@@ -90,7 +90,7 @@ module keymgr_dpe_kmac_if
   `ASSERT_INIT(IdRemBytes_A,  IdRem  % 8 == 0)
   `ASSERT_INIT(GenRemBytes_A, GenRem % 8 == 0)
 
-  // Number of kmac transactions required
+  // Number of KDF transactions required
   localparam int AdvRounds = (MaxAdvDataWidth + KmacDataIfWidth - 1) / KmacDataIfWidth;
   localparam int IdRounds  = (IdDataWidth + KmacDataIfWidth - 1) / KmacDataIfWidth;
   localparam int GenRounds = (GenDataWidth + KmacDataIfWidth - 1) / KmacDataIfWidth;
@@ -127,7 +127,7 @@ module keymgr_dpe_kmac_if
   logic start;
   logic [3:0] inputs_invalid_d, inputs_invalid_q;
   logic clr_err;
-  logic kmac_done_vld;
+  logic kdf_done_vld;
   logic cmd_chk;
 
   data_state_e state_q, state_d;
@@ -184,9 +184,9 @@ module keymgr_dpe_kmac_if
 
     clr_err = '0;
     fsm_error_o = '0;
-    kmac_error_o = '0;
+    kdf_error_o = '0;
 
-    kmac_done_vld = '0;
+    kdf_done_vld = '0;
 
     cmd_chk = 1'b1;
 
@@ -217,7 +217,7 @@ module keymgr_dpe_kmac_if
         strb = {IfBytes{1'b1}};
 
         // transaction accepted
-        if (kmac_data_i.req_ready) begin
+        if (kdf_data_i.req_ready) begin
           cnt_en = 1'b1;
 
           // second to last beat
@@ -241,15 +241,15 @@ module keymgr_dpe_kmac_if
         end
 
         // transaction accepted
-        cnt_clr = kmac_data_i.req_ready;
-        state_d = kmac_data_i.req_ready ? StOpWait : StTxLast;
+        cnt_clr = kdf_data_i.req_ready;
+        state_d = kdf_data_i.req_ready ? StOpWait : StTxLast;
 
       end
 
       StOpWait: begin
-        kmac_done_vld = 1'b1;
-        if (kmac_data_i.rsp_valid) begin
-          kmac_error_o = kmac_data_i.error;
+        kdf_done_vld = 1'b1;
+        if (kdf_data_i.rsp_valid) begin
+          kdf_error_o = kdf_data_i.error;
           done_o = 1'b1;
           state_d = StClean;
         end
@@ -288,12 +288,12 @@ module keymgr_dpe_kmac_if
 
   // when transaction is not complete, populate the data with random
   assign data_o = start && done_o ?
-                  {kmac_data_i.digest_s1,
-                   kmac_data_i.digest_s0} :
+                  {kdf_data_i.digest_s1,
+                   kdf_data_i.digest_s0} :
                   {{DecoyOutputCopies{entropy_i[1]}},
                    {DecoyOutputCopies{entropy_i[0]}}};
 
-  // The input invalid check is done whenever transactions are ongoing with kmac
+  // The input invalid check is done whenever transactions are ongoing with the KDF
   // once set, it cannot be unset until transactions are fully complete
   // TODO(#31420): Remove the id generation operation
   always_comb begin
@@ -331,35 +331,35 @@ module keymgr_dpe_kmac_if
   // so a subtract is necessary to send the right byte
   // alternatively we can also reverse the order of the input
   always_comb begin
-    kmac_data_o.data_s0 = decoy_data;
+    kdf_data_o.data_s0 = decoy_data;
     if (|cmd_error_o || inputs_invalid_o || fsm_error_o) begin
-      kmac_data_o.data_s0 = decoy_data;
+      kdf_data_o.data_s0 = decoy_data;
     end else if (valid && adv_en_i) begin
-      kmac_data_o.data_s0 = adv_data[adv_sel];
+      kdf_data_o.data_s0 = adv_data[adv_sel];
     end else if (valid && id_en_i) begin
-      kmac_data_o.data_s0 = id_data[id_sel];
+      kdf_data_o.data_s0 = id_data[id_sel];
     end else if (valid && gen_en_i) begin
-      kmac_data_o.data_s0 = gen_data[gen_sel];
+      kdf_data_o.data_s0 = gen_data[gen_sel];
     end
   end
 
   // Key manager operates on unshared data and accepts digest responses immediately.
-  assign kmac_data_o.data_s1   = '0;
-  assign kmac_data_o.req_valid = valid;
-  assign kmac_data_o.req_last  = last;
-  assign kmac_data_o.strb      = strb;
-  assign kmac_data_o.rsp_ready = 1'b1;
+  assign kdf_data_o.data_s1   = '0;
+  assign kdf_data_o.req_valid = valid;
+  assign kdf_data_o.req_last  = last;
+  assign kdf_data_o.strb      = strb;
+  assign kdf_data_o.rsp_ready = 1'b1;
 
   // A static interface has no finish response.
-  logic unused_kmac_finish_rsp;
-  assign unused_kmac_finish_rsp = kmac_data_i.rsp_finish;
+  logic unused_kdf_finish_rsp;
+  assign unused_kdf_finish_rsp = kdf_data_i.rsp_finish;
 
-  // kmac done is asserted outside of expected window
+  // KDF done is asserted outside of expected window
   // SEC_CM: KMAC_IF_DONE.CTRL.CONSISTENCY
-  logic kmac_done_err_q, kmac_done_err_d;
-  assign kmac_done_err_d = ~kmac_done_vld & kmac_data_i.rsp_valid |
-                           kmac_done_err_q;
-  assign kmac_done_error_o = kmac_done_err_q;
+  logic kdf_done_err_q, kdf_done_err_d;
+  assign kdf_done_err_d = ~kdf_done_vld & kdf_data_i.rsp_valid |
+                           kdf_done_err_q;
+  assign kdf_done_error_o = kdf_done_err_q;
 
 
   // the enables must be 1 hot
@@ -389,23 +389,23 @@ module keymgr_dpe_kmac_if
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       one_hot_err_q <= '0;
-      kmac_done_err_q <= '0;
+      kdf_done_err_q <= '0;
       cmd_consty_err_q <= '0;
     end else begin
       one_hot_err_q <= one_hot_err_d;
-      kmac_done_err_q <= kmac_done_err_d;
+      kdf_done_err_q <= kdf_done_err_d;
       cmd_consty_err_q <= cmd_consty_err_d;
     end
   end
 
-  // command error occurs if kmac errors or if the command itself is invalid
+  // command error occurs if the KDF errors or if the command itself is invalid
   assign cmd_error_o = one_hot_err_q | cmd_consty_err_q;
 
   // request entropy to churn whenever a transaction is accepted
-  assign prng_en_o = kmac_data_o.req_valid & kmac_data_i.req_ready;
+  assign prng_en_o = kdf_data_o.req_valid & kdf_data_i.req_ready;
 
   // as long as we are transmitting, the strobe should never be 0.
   `ASSERT(LastStrb_A, valid |-> strb != '0)
 
 
-endmodule // keymgr_dpe_kmac_if
+endmodule // keymgr_dpe_kdf_if
