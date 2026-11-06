@@ -24,7 +24,7 @@ enum {
   /**
    * Number of 32-bit words for each output key share.
    */
-  kKeymgrDPEOutputShareNumWords = 8,
+  kKeymgrDPEOutputShareNumWords = 12,
 };
 
 /**

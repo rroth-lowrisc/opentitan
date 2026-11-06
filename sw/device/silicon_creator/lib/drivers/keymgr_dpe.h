@@ -107,7 +107,7 @@ enum {
   /**
    * Number of 32-bit words for the key.
    */
-  kScKeymgrDPEKeyNumWords = 8,
+  kScKeymgrDPEKeyNumWords = 12,
 };
 
 /**
