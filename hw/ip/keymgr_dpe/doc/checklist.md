@@ -35,17 +35,17 @@ Security      | [SEC_CM_SCOPED][]              | Done        |
 
 Type          | Item                      | Resolution  | Note/Collaterals
 --------------|---------------------------|-------------|------------------
-Documentation | [NEW_FEATURES][]          | Not Started |
-Documentation | [BLOCK_DIAGRAM][]         | Not Started |
-Documentation | [DOC_INTERFACE][]         | Not Started |
-Documentation | [DOC_INTEGRATION_GUIDE][] | Not Started |
+Documentation | [NEW_FEATURES][]          | Done        |
+Documentation | [BLOCK_DIAGRAM][]         | Done        |
+Documentation | [DOC_INTERFACE][]         | Done        |
+Documentation | [DOC_INTEGRATION_GUIDE][] | Done        |
 Documentation | [MISSING_FUNC][]          | Not Started |
 Documentation | [FEATURE_FROZEN][]        | Not Started |
 RTL           | [FEATURE_COMPLETE][]      | Not Started |
 RTL           | [PORT_FROZEN][]           | Not Started |
 RTL           | [ARCHITECTURE_FROZEN][]   | Not Started |
 RTL           | [REVIEW_TODO][]           | Not Started |
-RTL           | [STYLE_X][]               | Not Started |
+RTL           | [STYLE_X][]               | Done        |
 RTL           | [CDC_SYNCMACRO][]         | Not Started |
 Code Quality  | [LINT_PASS][]             | Not Started |
 Code Quality  | [CDC_SETUP][]             | Not Started |
