@@ -25,6 +25,17 @@ This document specifies the functionality of the OpenTitan key manager DPE which
 - Support for DICE open profile and for the DICE Protection Environment (DPE).
 - Two independent root secrets (_creator root key_ and _secondary root key_), each loadable into an empty slot by software and lockable until reset, so separate DICE hierarchies can be derived.
 
+## Supported Parameter Sets
+
+The design is signed off with the following instantiation parameters.
+
+| Parameter          | Type                             | Value           |
+|:-------------------|:---------------------------------|:----------------|
+| NumInstHwSlot      | unsigned int                     | 4               |
+| NumBootStages      | unsigned int                     | 4               |
+| NumRomDigestInputs | unsigned int                     | 1               |
+| KdfEngineSel       | keymgr_dpe_pkg::kdf_engine_sel_e | `KdfEngineBoth` |
+
 ## Description
 
 The Keymgr DPE implements the hardware component of the [identities and root keys](../../../doc/security/specs/identities_and_root_keys/) strategy of OpenTitan.
