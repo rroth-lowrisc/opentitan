@@ -580,12 +580,12 @@ interface keymgr_dpe_if(input clk, input rst_n);
   // all ones. The LFSR can produce these values, just rarely.
   task automatic force_const_decoy(bit all_ones);
     `uvm_info(msg_id, $sformatf("Force decoy data to all %0d", all_ones), UVM_LOW)
-    if (all_ones) force tb.dut.u_kmac_if.entropy_i = '1;
-    else          force tb.dut.u_kmac_if.entropy_i = '0;
+    if (all_ones) force tb.dut.u_kdf_if.entropy_i = '1;
+    else          force tb.dut.u_kdf_if.entropy_i = '0;
   endtask
 
   task automatic release_const_decoy();
-    release tb.dut.u_kmac_if.entropy_i;
+    release tb.dut.u_kdf_if.entropy_i;
   endtask
 
   bit trigger_force_hw_key_sel;

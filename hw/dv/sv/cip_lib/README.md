@@ -569,7 +569,7 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
         if (!uvm_re_match("*.u_reseed_ctrl*", if_proxy.path)) begin
           exp[keymgr_dpe_pkg::FaultReseedCnt] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultReseedCnt);
-        end else if (!uvm_re_match("*.u_kmac_if*", if_proxy.path)) begin
+        end else if (!uvm_re_match("*.u_kdf_if*", if_proxy.path)) begin
           exp[keymgr_dpe_pkg::FaultKmacFsm] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKmacFsm);
         end else begin
@@ -578,7 +578,7 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
         end
       end
       SecCmPrimSparseFsmFlop: begin
-        if (!uvm_re_match("*.u_kmac_if*", if_proxy.path)) begin
+        if (!uvm_re_match("*.u_kdf_if*", if_proxy.path)) begin
           exp[keymgr_dpe_pkg::FaultKmacFsm] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKmacFsm);
         end else if (!uvm_re_match("*.u_sideload_ctrl*", if_proxy.path)) begin
@@ -609,7 +609,7 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
           $asserton(0, "tb.dut.u_ctrl.DataEn_A");
           $asserton(0, "tb.dut.u_ctrl.DataEnDis_A");
           $asserton(0, "tb.dut.u_ctrl.CntZero_A");
-          $asserton(0, "tb.dut.u_kmac_if.LastStrb_A");
+          $asserton(0, "tb.dut.u_kdf_if.LastStrb_A");
           $asserton(0, "tb.dut.KmacDataKnownO_A");
         end else begin
           $assertoff(0, "tb.kmac_if");
@@ -617,7 +617,7 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
           $assertoff(0, "tb.dut.u_ctrl.DataEn_A");
           $assertoff(0, "tb.dut.u_ctrl.DataEnDis_A");
           $assertoff(0, "tb.dut.u_ctrl.CntZero_A");
-          $assertoff(0, "tb.dut.u_kmac_if.LastStrb_A");
+          $assertoff(0, "tb.dut.u_kdf_if.LastStrb_A");
           $assertoff(0, "tb.dut.KmacDataKnownO_A");
         end
       end

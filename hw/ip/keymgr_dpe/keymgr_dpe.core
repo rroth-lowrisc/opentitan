@@ -31,7 +31,7 @@ filesets:
       - rtl/keymgr_dpe_sideload_key.sv
       - rtl/keymgr_dpe_sideload_key_ctrl.sv
       - rtl/keymgr_dpe_data_en_state.sv
-      - rtl/keymgr_dpe_kmac_if.sv
+      - rtl/keymgr_dpe_kdf_if.sv
       - rtl/keymgr_dpe_input_checks.sv
       - rtl/keymgr_dpe_err.sv
       - rtl/keymgr_dpe_op_state_ctrl.sv

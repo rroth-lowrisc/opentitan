@@ -828,10 +828,10 @@ module keymgr_dpe
 
   // Keymgr DPE does not have id generation, so assign '0 to `id_en`
   assign id_en = 1'b0;
-  keymgr_dpe_kmac_if #(
+  keymgr_dpe_kdf_if #(
     .RndCnstRandPerm(RndCnstRandPerm),
     .MaxAdvDataWidth(DpeAdvDataWidth)
-  ) u_kmac_if (
+  ) u_kdf_if (
     .clk_i,
     .rst_ni,
     .prng_en_o(data_lfsr_en),
@@ -1143,7 +1143,7 @@ module keymgr_dpe
   `ASSERT_INIT(ErrCntMatch_A, ErrLastPos == AsyncErrLastIdx + SyncErrLastIdx)
 
   `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(CtrlCntAlertCheck_A, u_ctrl.u_cnt, alert_tx_o[1])
-  `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(KmacIfCntAlertCheck_A, u_kmac_if.u_cnt, alert_tx_o[1])
+  `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(KmacIfCntAlertCheck_A, u_kdf_if.u_cnt, alert_tx_o[1])
   `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(ReseedCtrlCntAlertCheck_A, u_reseed_ctrl.u_reseed_cnt,
                                          alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CtrlMainFsmCheck_A, u_ctrl.u_state_regs, alert_tx_o[1])
@@ -1151,7 +1151,7 @@ module keymgr_dpe
       u_ctrl.u_data_en.u_state_regs, alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CtrlOpFsmCheck_A,
       u_ctrl.u_op_state.u_state_regs, alert_tx_o[1])
-  `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(KmacIfFsmCheck_A, u_kmac_if.u_state_regs, alert_tx_o[1])
+  `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(KmacIfFsmCheck_A, u_kdf_if.u_state_regs, alert_tx_o[1])
   `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(SideloadCtrlFsmCheck_A,
       u_sideload_ctrl.u_state_regs, alert_tx_o[1])
 

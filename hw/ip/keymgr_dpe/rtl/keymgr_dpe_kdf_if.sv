@@ -7,7 +7,7 @@
 
 `include "prim_assert.sv"
 
-module keymgr_dpe_kmac_if
+module keymgr_dpe_kdf_if
   import keymgr_dpe_pkg::*;
 #(
   parameter rand_perm_t RndCnstRandPerm = RndCnstRandPermDefault,
@@ -408,4 +408,4 @@ module keymgr_dpe_kmac_if
   `ASSERT(LastStrb_A, valid |-> strb != '0)
 
 
-endmodule // keymgr_dpe_kmac_if
+endmodule // keymgr_dpe_kdf_if
