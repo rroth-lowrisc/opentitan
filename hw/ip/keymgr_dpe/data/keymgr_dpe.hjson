@@ -474,26 +474,26 @@
         Primary count is duplicated.
       '''
     }
-    { name: "KMAC_IF.FSM.SPARSE",
+    { name: "KDF_IF.FSM.SPARSE",
       desc: '''
-        kmac interface fsm is sparsely encoded.
+        KDF interface fsm is sparsely encoded.
       '''
     }
-    { name: "KMAC_IF.CTR.REDUN",
+    { name: "KDF_IF.CTR.REDUN",
       desc: '''
         Primary count uses cross count.
       '''
     }
-    { name: "KMAC_IF_CMD.CTRL.CONSISTENCY",
+    { name: "KDF_IF_CMD.CTRL.CONSISTENCY",
       desc: '''
-        One hot check for kmac interface commands.
+        One hot check for KDF interface commands.
         Also, command enable (adv_en, id_en, gen_en) is checked for consistency
         throughout the operation.
       '''
     }
-    { name: "KMAC_IF_DONE.CTRL.CONSISTENCY",
+    { name: "KDF_IF_DONE.CTRL.CONSISTENCY",
       desc: '''
-        Spurious kmac done check.
+        Spurious KDF done check.
       '''
     }
     { name: "RESEED.CTR.REDUN",

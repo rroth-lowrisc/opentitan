@@ -141,7 +141,7 @@ module keymgr_dpe_kdf_if
   assign start = adv_en_i | id_en_i | gen_en_i;
 
   logic cnt_err;
-  // SEC_CM: KMAC_IF.CTR.REDUN
+  // SEC_CM: KDF_IF.CTR.REDUN
   prim_count #(
     .Width(CntWidth),
     .ResetValue({CntWidth{1'b1}})
@@ -168,7 +168,7 @@ module keymgr_dpe_kdf_if
     end
    end
 
-  // SEC_CM: KMAC_IF.FSM.SPARSE
+  // SEC_CM: KDF_IF.FSM.SPARSE
   `PRIM_FLOP_SPARSE_FSM(u_state_regs, state_d, state_q, data_state_e, StIdle)
 
   always_comb begin
@@ -355,7 +355,7 @@ module keymgr_dpe_kdf_if
   assign unused_kdf_finish_rsp = kdf_data_i.rsp_finish;
 
   // KDF done is asserted outside of expected window
-  // SEC_CM: KMAC_IF_DONE.CTRL.CONSISTENCY
+  // SEC_CM: KDF_IF_DONE.CTRL.CONSISTENCY
   logic kdf_done_err_q, kdf_done_err_d;
   assign kdf_done_err_d = ~kdf_done_vld & kdf_data_i.rsp_valid |
                            kdf_done_err_q;
@@ -381,7 +381,7 @@ module keymgr_dpe_kdf_if
                             cmd_consty_err_q;
 
   // if a one hot error occurs, latch onto it permanently
-  // SEC_CM: KMAC_IF_CMD.CTRL.CONSISTENCY
+  // SEC_CM: KDF_IF_CMD.CTRL.CONSISTENCY
   logic one_hot_err_q, one_hot_err_d;
   assign one_hot_err_d = |(enables_d & enables_sub) |
                          one_hot_err_q;
