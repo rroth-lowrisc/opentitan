@@ -332,7 +332,9 @@ module keymgr_dpe_ctrl
       // keymgr slots, so that the sensitive secret values that loaded later are protected against
       // simple Hamming weight leakages.
       SlotDestRandomize: begin
-        key_slots_d[slot_dst_sel_i] = '0;
+        if (cnt == '0) begin
+          key_slots_d[slot_dst_sel_i] = '0;
+        end
         for (int j = 0; j < Shares; j++) begin
           // Initialize pre-UDS value with equal randomness for SCA resistance
           key_slots_d[slot_dst_sel_i].key[j][cnt*EntropyWidth +: EntropyWidth] = entropy_i[0];
@@ -385,7 +387,7 @@ module keymgr_dpe_ctrl
         key_slots_d[slot_dst_sel_i] = '0;
         for (int j = 0; j < Shares; j++) begin
           // Clear all shares with equal randomness for SCA resistance
-          key_slots_d[slot_dst_sel_i].key[j][cnt*EntropyWidth +: EntropyWidth] = entropy_i[0];
+          key_slots_d[slot_dst_sel_i].key[j] = {EntropyRounds{entropy_i[0]}};
         end
       end
 
