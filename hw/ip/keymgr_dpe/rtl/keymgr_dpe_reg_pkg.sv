@@ -164,16 +164,16 @@ package keymgr_dpe_reg_pkg;
     } regfile_intg;
     struct packed {
       logic        q;
-    } kmac_out;
+    } kdf_out;
     struct packed {
       logic        q;
-    } kmac_op;
+    } kdf_op;
     struct packed {
       logic        q;
-    } kmac_done;
+    } kdf_done;
     struct packed {
       logic        q;
-    } kmac_fsm;
+    } kdf_fsm;
     struct packed {
       logic        q;
     } cmd;
@@ -270,7 +270,7 @@ package keymgr_dpe_reg_pkg;
     struct packed {
       logic        d;
       logic        de;
-    } invalid_kmac_input;
+    } invalid_kdf_input;
     struct packed {
       logic        d;
       logic        de;
@@ -317,19 +317,19 @@ package keymgr_dpe_reg_pkg;
     struct packed {
       logic        d;
       logic        de;
-    } kmac_out;
+    } kdf_out;
     struct packed {
       logic        d;
       logic        de;
-    } kmac_op;
+    } kdf_op;
     struct packed {
       logic        d;
       logic        de;
-    } kmac_done;
+    } kdf_done;
     struct packed {
       logic        d;
       logic        de;
-    } kmac_fsm;
+    } kdf_fsm;
     struct packed {
       logic        d;
       logic        de;

@@ -391,15 +391,15 @@ module keymgr_dpe_reg_top (
   logic err_code_we;
   logic err_code_invalid_op_qs;
   logic err_code_invalid_op_wd;
-  logic err_code_invalid_kmac_input_qs;
-  logic err_code_invalid_kmac_input_wd;
+  logic err_code_invalid_kdf_input_qs;
+  logic err_code_invalid_kdf_input_wd;
   logic err_code_invalid_shadow_update_qs;
   logic err_code_invalid_shadow_update_wd;
   logic fault_status_cmd_qs;
-  logic fault_status_kmac_fsm_qs;
-  logic fault_status_kmac_done_qs;
-  logic fault_status_kmac_op_qs;
-  logic fault_status_kmac_out_qs;
+  logic fault_status_kdf_fsm_qs;
+  logic fault_status_kdf_done_qs;
+  logic fault_status_kdf_op_qs;
+  logic fault_status_kdf_out_qs;
   logic fault_status_regfile_intg_qs;
   logic fault_status_shadow_qs;
   logic fault_status_ctrl_fsm_intg_qs;
@@ -3218,24 +3218,24 @@ module keymgr_dpe_reg_top (
     .qs     (err_code_invalid_op_qs)
   );
 
-  //   F[invalid_kmac_input]: 1:1
+  //   F[invalid_kdf_input]: 1:1
   prim_subreg #(
     .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
-  ) u_err_code_invalid_kmac_input (
+  ) u_err_code_invalid_kdf_input (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
     .reinit_i(1'b0),
 
     // from register interface
     .we     (err_code_we),
-    .wd     (err_code_invalid_kmac_input_wd),
+    .wd     (err_code_invalid_kdf_input_wd),
 
     // from internal hardware
-    .de     (hw2reg.err_code.invalid_kmac_input.de),
-    .d      (hw2reg.err_code.invalid_kmac_input.d),
+    .de     (hw2reg.err_code.invalid_kdf_input.de),
+    .d      (hw2reg.err_code.invalid_kdf_input.d),
 
     // to internal hardware
     .qe     (),
@@ -3243,7 +3243,7 @@ module keymgr_dpe_reg_top (
     .ds     (),
 
     // to register interface (read)
-    .qs     (err_code_invalid_kmac_input_qs)
+    .qs     (err_code_invalid_kdf_input_qs)
   );
 
   //   F[invalid_shadow_update]: 2:2
@@ -3304,13 +3304,13 @@ module keymgr_dpe_reg_top (
     .qs     (fault_status_cmd_qs)
   );
 
-  //   F[kmac_fsm]: 1:1
+  //   F[kdf_fsm]: 1:1
   prim_subreg #(
     .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
-  ) u_fault_status_kmac_fsm (
+  ) u_fault_status_kdf_fsm (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
     .reinit_i(1'b0),
@@ -3320,25 +3320,25 @@ module keymgr_dpe_reg_top (
     .wd     ('0),
 
     // from internal hardware
-    .de     (hw2reg.fault_status.kmac_fsm.de),
-    .d      (hw2reg.fault_status.kmac_fsm.d),
+    .de     (hw2reg.fault_status.kdf_fsm.de),
+    .d      (hw2reg.fault_status.kdf_fsm.d),
 
     // to internal hardware
     .qe     (),
-    .q      (reg2hw.fault_status.kmac_fsm.q),
+    .q      (reg2hw.fault_status.kdf_fsm.q),
     .ds     (),
 
     // to register interface (read)
-    .qs     (fault_status_kmac_fsm_qs)
+    .qs     (fault_status_kdf_fsm_qs)
   );
 
-  //   F[kmac_done]: 2:2
+  //   F[kdf_done]: 2:2
   prim_subreg #(
     .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
-  ) u_fault_status_kmac_done (
+  ) u_fault_status_kdf_done (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
     .reinit_i(1'b0),
@@ -3348,25 +3348,25 @@ module keymgr_dpe_reg_top (
     .wd     ('0),
 
     // from internal hardware
-    .de     (hw2reg.fault_status.kmac_done.de),
-    .d      (hw2reg.fault_status.kmac_done.d),
+    .de     (hw2reg.fault_status.kdf_done.de),
+    .d      (hw2reg.fault_status.kdf_done.d),
 
     // to internal hardware
     .qe     (),
-    .q      (reg2hw.fault_status.kmac_done.q),
+    .q      (reg2hw.fault_status.kdf_done.q),
     .ds     (),
 
     // to register interface (read)
-    .qs     (fault_status_kmac_done_qs)
+    .qs     (fault_status_kdf_done_qs)
   );
 
-  //   F[kmac_op]: 3:3
+  //   F[kdf_op]: 3:3
   prim_subreg #(
     .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
-  ) u_fault_status_kmac_op (
+  ) u_fault_status_kdf_op (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
     .reinit_i(1'b0),
@@ -3376,25 +3376,25 @@ module keymgr_dpe_reg_top (
     .wd     ('0),
 
     // from internal hardware
-    .de     (hw2reg.fault_status.kmac_op.de),
-    .d      (hw2reg.fault_status.kmac_op.d),
+    .de     (hw2reg.fault_status.kdf_op.de),
+    .d      (hw2reg.fault_status.kdf_op.d),
 
     // to internal hardware
     .qe     (),
-    .q      (reg2hw.fault_status.kmac_op.q),
+    .q      (reg2hw.fault_status.kdf_op.q),
     .ds     (),
 
     // to register interface (read)
-    .qs     (fault_status_kmac_op_qs)
+    .qs     (fault_status_kdf_op_qs)
   );
 
-  //   F[kmac_out]: 4:4
+  //   F[kdf_out]: 4:4
   prim_subreg #(
     .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
-  ) u_fault_status_kmac_out (
+  ) u_fault_status_kdf_out (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
     .reinit_i(1'b0),
@@ -3404,16 +3404,16 @@ module keymgr_dpe_reg_top (
     .wd     ('0),
 
     // from internal hardware
-    .de     (hw2reg.fault_status.kmac_out.de),
-    .d      (hw2reg.fault_status.kmac_out.d),
+    .de     (hw2reg.fault_status.kdf_out.de),
+    .d      (hw2reg.fault_status.kdf_out.d),
 
     // to internal hardware
     .qe     (),
-    .q      (reg2hw.fault_status.kmac_out.q),
+    .q      (reg2hw.fault_status.kdf_out.q),
     .ds     (),
 
     // to register interface (read)
-    .qs     (fault_status_kmac_out_qs)
+    .qs     (fault_status_kdf_out_qs)
   );
 
   //   F[regfile_intg]: 5:5
@@ -4423,7 +4423,7 @@ module keymgr_dpe_reg_top (
 
   assign err_code_invalid_op_wd = reg_wdata[0];
 
-  assign err_code_invalid_kmac_input_wd = reg_wdata[1];
+  assign err_code_invalid_kdf_input_wd = reg_wdata[1];
 
   assign err_code_invalid_shadow_update_wd = reg_wdata[2];
   assign debug_we = addr_hit[70] & reg_we & !reg_error;
@@ -4864,16 +4864,16 @@ module keymgr_dpe_reg_top (
 
       addr_hit[68]: begin
         reg_rdata_next[0] = err_code_invalid_op_qs;
-        reg_rdata_next[1] = err_code_invalid_kmac_input_qs;
+        reg_rdata_next[1] = err_code_invalid_kdf_input_qs;
         reg_rdata_next[2] = err_code_invalid_shadow_update_qs;
       end
 
       addr_hit[69]: begin
         reg_rdata_next[0] = fault_status_cmd_qs;
-        reg_rdata_next[1] = fault_status_kmac_fsm_qs;
-        reg_rdata_next[2] = fault_status_kmac_done_qs;
-        reg_rdata_next[3] = fault_status_kmac_op_qs;
-        reg_rdata_next[4] = fault_status_kmac_out_qs;
+        reg_rdata_next[1] = fault_status_kdf_fsm_qs;
+        reg_rdata_next[2] = fault_status_kdf_done_qs;
+        reg_rdata_next[3] = fault_status_kdf_op_qs;
+        reg_rdata_next[4] = fault_status_kdf_out_qs;
         reg_rdata_next[5] = fault_status_regfile_intg_qs;
         reg_rdata_next[6] = fault_status_shadow_qs;
         reg_rdata_next[7] = fault_status_ctrl_fsm_intg_qs;

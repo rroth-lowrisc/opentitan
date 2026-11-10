@@ -89,8 +89,8 @@ module keymgr_dpe_err
   assign async_err_o[AsyncErrShadowUpdate] = shadowed_update_err_i;
 
   // sync faults
-  assign sync_fault_d[SyncFaultKmacOp] = err_vld & kdf_op_err_i;
-  assign sync_fault_d[SyncFaultKmacOut] = err_vld & invalid_kdf_out_i;
+  assign sync_fault_d[SyncFaultKdfOp] = err_vld & kdf_op_err_i;
+  assign sync_fault_d[SyncFaultKdfOut] = err_vld & invalid_kdf_out_i;
   assign sync_fault_d[SyncFaultSideSel] = err_vld & sideload_sel_err_i;
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -113,9 +113,9 @@ module keymgr_dpe_err
     end
   end
   assign async_fault_o = async_fault_q | async_fault_d;
-  assign async_fault_d[AsyncFaultKmacCmd]  = kdf_cmd_err_i;
-  assign async_fault_d[AsyncFaultKmacFsm]  = kdf_fsm_err_i;
-  assign async_fault_d[AsyncFaultKmacDone] = kdf_done_err_i;
+  assign async_fault_d[AsyncFaultKdfCmd]  = kdf_cmd_err_i;
+  assign async_fault_d[AsyncFaultKdfFsm]  = kdf_fsm_err_i;
+  assign async_fault_d[AsyncFaultKdfDone] = kdf_done_err_i;
   assign async_fault_d[AsyncFaultRegIntg]  = regfile_intg_err_i;
   assign async_fault_d[AsyncFaultShadow ]  = shadowed_storage_err_i;
   assign async_fault_d[AsyncFaultFsmIntg]  = ctrl_fsm_err_i | data_fsm_err_i | op_fsm_err_i;
@@ -134,12 +134,12 @@ module keymgr_dpe_err
   assign error_o[ErrShadowUpdate] = async_err_o[AsyncErrShadowUpdate];
 
   // output to fault code register
-  assign fault_o[FaultKmacOp]     = op_done_i & sync_fault_o[SyncFaultKmacOp];
-  assign fault_o[FaultKmacOut]    = op_done_i & sync_fault_o[SyncFaultKmacOut];
+  assign fault_o[FaultKdfOp]     = op_done_i & sync_fault_o[SyncFaultKdfOp];
+  assign fault_o[FaultKdfOut]    = op_done_i & sync_fault_o[SyncFaultKdfOut];
   assign fault_o[FaultSideSel]    = op_done_i & sync_fault_o[SyncFaultSideSel];
-  assign fault_o[FaultKmacCmd]    = async_fault_o[AsyncFaultKmacCmd];
-  assign fault_o[FaultKmacFsm]    = async_fault_o[AsyncFaultKmacFsm];
-  assign fault_o[FaultKmacDone]   = async_fault_o[AsyncFaultKmacDone];
+  assign fault_o[FaultKdfCmd]    = async_fault_o[AsyncFaultKdfCmd];
+  assign fault_o[FaultKdfFsm]    = async_fault_o[AsyncFaultKdfFsm];
+  assign fault_o[FaultKdfDone]   = async_fault_o[AsyncFaultKdfDone];
   assign fault_o[FaultRegIntg]    = async_fault_o[AsyncFaultRegIntg];
   assign fault_o[FaultShadow]     = async_fault_o[AsyncFaultShadow];
   assign fault_o[FaultCtrlFsm]    = async_fault_o[AsyncFaultFsmIntg];

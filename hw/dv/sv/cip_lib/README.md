@@ -570,8 +570,8 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
           exp[keymgr_dpe_pkg::FaultReseedCnt] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultReseedCnt);
         end else if (!uvm_re_match("*.u_kdf_if*", if_proxy.path)) begin
-          exp[keymgr_dpe_pkg::FaultKmacFsm] = 1;
-          if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKmacFsm);
+          exp[keymgr_dpe_pkg::FaultKdfFsm] = 1;
+          if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKdfFsm);
         end else begin
           exp[keymgr_dpe_pkg::FaultCtrlCnt] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultCtrlCnt);
@@ -579,8 +579,8 @@ class keymgr_dpe_common_vseq extends keymgr_dpe_base_vseq;
       end
       SecCmPrimSparseFsmFlop: begin
         if (!uvm_re_match("*.u_kdf_if*", if_proxy.path)) begin
-          exp[keymgr_dpe_pkg::FaultKmacFsm] = 1;
-          if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKmacFsm);
+          exp[keymgr_dpe_pkg::FaultKdfFsm] = 1;
+          if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultKdfFsm);
         end else if (!uvm_re_match("*.u_sideload_ctrl*", if_proxy.path)) begin
           exp[keymgr_dpe_pkg::FaultSideFsm] = 1;
           if (cfg.en_cov) cov.fault_status_cg.sample(keymgr_dpe_pkg::FaultSideFsm);

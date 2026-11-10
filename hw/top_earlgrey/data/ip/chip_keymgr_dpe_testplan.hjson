@@ -103,7 +103,7 @@
             - Verify that KMAC returns an error signal to the keymgr dpe via checking keymgr dpe CSRs, when
               the operation is done:
               - Check `op_status` is set to `DONE_ERROR`.
-              - Check `fault_status.kmac_done` is set to 1.
+              - Check `fault_status.kdf_done` is set to 1.
             '''
       stage: V3
       si_stage: NA

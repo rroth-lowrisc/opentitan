@@ -487,7 +487,7 @@ interface keymgr_dpe_if(input clk, input rst_n);
                                            force_cmds != op_enables;, , msg_id)
         inject_cmd_err(force_cmds);
       end
-      FaultKmacDoneError: begin
+      FaultKdfDoneError: begin
         // wait until it's not a valid window to issue rsp_valid
         `DV_SPINWAIT(
           while (1) begin

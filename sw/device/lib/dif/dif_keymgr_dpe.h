@@ -230,9 +230,9 @@ typedef enum dif_keymgr_dpe_status_code {
    */
   kDifKeymgrDpeStatusCodeInvalidOperation = 1 << 1,
   /**
-   * Key manager issued invalid data to KMAC interface.
+   * Key manager issued invalid data to the KDF interface.
    */
-  kDifKeymgrDpeStatusCodeInvalidKmacInput = 1 << 2,
+  kDifKeymgrDpeStatusCodeInvalidKdfInput = 1 << 2,
   /**
    * Key manager encountered invalid state.
    */

@@ -995,17 +995,17 @@ module keymgr_dpe
   );
 
   assign hw2reg.err_code.invalid_op.d             = 1'b1;
-  assign hw2reg.err_code.invalid_kmac_input.d     = 1'b1;
+  assign hw2reg.err_code.invalid_kdf_input.d      = 1'b1;
   assign hw2reg.err_code.invalid_shadow_update.d  = 1'b1;
   assign hw2reg.err_code.invalid_op.de            = err_code[ErrInvalidOp];
-  assign hw2reg.err_code.invalid_kmac_input.de    = err_code[ErrInvalidIn];
+  assign hw2reg.err_code.invalid_kdf_input.de     = err_code[ErrInvalidIn];
   assign hw2reg.err_code.invalid_shadow_update.de = err_code[ErrShadowUpdate];
 
-  assign hw2reg.fault_status.cmd.de           = fault_code[FaultKmacCmd];
-  assign hw2reg.fault_status.kmac_fsm.de      = fault_code[FaultKmacFsm];
-  assign hw2reg.fault_status.kmac_op.de       = fault_code[FaultKmacOp];
-  assign hw2reg.fault_status.kmac_done.de     = fault_code[FaultKmacDone];
-  assign hw2reg.fault_status.kmac_out.de      = fault_code[FaultKmacOut];
+  assign hw2reg.fault_status.cmd.de           = fault_code[FaultKdfCmd];
+  assign hw2reg.fault_status.kdf_fsm.de       = fault_code[FaultKdfFsm];
+  assign hw2reg.fault_status.kdf_op.de        = fault_code[FaultKdfOp];
+  assign hw2reg.fault_status.kdf_done.de      = fault_code[FaultKdfDone];
+  assign hw2reg.fault_status.kdf_out.de       = fault_code[FaultKdfOut];
   assign hw2reg.fault_status.regfile_intg.de  = fault_code[FaultRegIntg];
   assign hw2reg.fault_status.shadow.de        = fault_code[FaultShadow];
   assign hw2reg.fault_status.ctrl_fsm_intg.de = fault_code[FaultCtrlFsm];
@@ -1016,10 +1016,10 @@ module keymgr_dpe
   assign hw2reg.fault_status.side_ctrl_sel.de = fault_code[FaultSideSel];
   assign hw2reg.fault_status.key_ecc.de       = fault_code[FaultKeyEcc];
   assign hw2reg.fault_status.cmd.d            = 1'b1;
-  assign hw2reg.fault_status.kmac_fsm.d       = 1'b1;
-  assign hw2reg.fault_status.kmac_done.d      = 1'b1;
-  assign hw2reg.fault_status.kmac_op.d        = 1'b1;
-  assign hw2reg.fault_status.kmac_out.d       = 1'b1;
+  assign hw2reg.fault_status.kdf_fsm.d        = 1'b1;
+  assign hw2reg.fault_status.kdf_done.d       = 1'b1;
+  assign hw2reg.fault_status.kdf_op.d         = 1'b1;
+  assign hw2reg.fault_status.kdf_out.d        = 1'b1;
   assign hw2reg.fault_status.regfile_intg.d   = 1'b1;
   assign hw2reg.fault_status.shadow.d         = 1'b1;
   assign hw2reg.fault_status.ctrl_fsm_intg.d  = 1'b1;

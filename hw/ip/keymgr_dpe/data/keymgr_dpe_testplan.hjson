@@ -38,7 +38,7 @@
             - Check that the valid bit is set to 1 in the destination slot.
             - Check that the policy field is correctly updated from the SLOT_POLICY CSR.
             - Check KMAC key, KMAC data, and SW output data for correctness.
-            - Check that constant decoy data does not raise the `KMAC_OUT` fault.
+            - Check that constant decoy data does not raise the `KDF_OUT` fault.
             '''
       stage: V1
       tests: ["keymgr_dpe_smoke"]
@@ -50,7 +50,7 @@
             - Fully randomize SW inputs: rom_ext_desc_*, software_binding_*, salt_*, max_*_key_ver,
               *_key_ver_regwen.
             - Randomize key_version to any value less than max_*_key_ver, to avoid triggering
-              the `invalid_kmac_input` error.
+              the `invalid_kdf_input` error.
             - Fully randomize HW inputs from flash, OTP, and life cycle.
             - Randomize *sw_binding_regwen. Verify that this gates *_sw_binding writes and that
               it is cleared after a successful advance operation.
@@ -386,7 +386,7 @@
               the output validity check.
 
             Checks:
-            - Verify that `KMAC_OP` inside the `fault_status` is updated correctly.
+            - Verify that `KDF_OP` inside the `fault_status` is updated correctly.
             '''
       stage: V2
       tests: [/*TODO(#30753) Implement test: "keymgr_dpe_kmac_error_response"*/]
@@ -402,7 +402,7 @@
 
             Checks:
             - Verify that alert `recov_operation_err` is triggered and err_code is
-              `INVALID_KMAC_INPUT`.
+              `INVALID_KDF_INPUT`.
             - Verify the content of the destination hardware slot is unchanged.
             '''
       stage: V2
@@ -420,7 +420,7 @@
 
             Checks:
             - Verify that alert `recov_operation_err` is triggered and err_code is
-              `INVALID_KMAC_INPUT`.
+              `INVALID_KDF_INPUT`.
             - Verify the content of the destination hardware slot is unchanged.
             - Verify the corresponding invalid entry inside the debug register is set.
             '''

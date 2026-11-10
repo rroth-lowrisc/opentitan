@@ -119,8 +119,8 @@ static_assert(KEYMGR_DPE_METADATA_HIGH_MULTIREG_COUNT ==
 static_assert(kDifKeymgrDpeStatusCodeInvalidOperation >> 1 ==
                   1 << KEYMGR_DPE_ERR_CODE_INVALID_OP_BIT,
               "Layout of ERR_CODE register changed.");
-static_assert(kDifKeymgrDpeStatusCodeInvalidKmacInput >> 1 ==
-                  1 << KEYMGR_DPE_ERR_CODE_INVALID_KMAC_INPUT_BIT,
+static_assert(kDifKeymgrDpeStatusCodeInvalidKdfInput >> 1 ==
+                  1 << KEYMGR_DPE_ERR_CODE_INVALID_KDF_INPUT_BIT,
               "Layout of ERR_CODE register changed.");
 
 /**

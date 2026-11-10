@@ -92,7 +92,7 @@ package keymgr_dpe_env_pkg;
     FaultOpNotOnehot,
     FaultOpNotConsistent,
     FaultOpNotExist,
-    FaultKmacDoneError,
+    FaultKdfDoneError,
     FaultSideloadNotConsistent,
     FaultKeyIntgError
   } keymgr_dpe_fault_inject_type_e;

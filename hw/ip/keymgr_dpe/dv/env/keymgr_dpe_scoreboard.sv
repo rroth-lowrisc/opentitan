@@ -1057,8 +1057,8 @@ class keymgr_dpe_scoreboard extends cip_base_scoreboard #(
         do_read_check = 1'b0;
 
         if (data_phase_read) begin
-          `DV_CHECK_EQ(item.d_data[keymgr_dpe_pkg::FaultKmacOp],  is_kmac_rsp_err)
-          `DV_CHECK_EQ(item.d_data[keymgr_dpe_pkg::FaultKmacOut], is_kmac_invalid_data)
+          `DV_CHECK_EQ(item.d_data[keymgr_dpe_pkg::FaultKdfOp],  is_kmac_rsp_err)
+          `DV_CHECK_EQ(item.d_data[keymgr_dpe_pkg::FaultKdfOut], is_kmac_invalid_data)
         end
       end
       "debug": begin

@@ -390,16 +390,16 @@ package keymgr_dpe_pkg;
   } keymgr_dpe_async_error_e;
 
   typedef enum logic [1:0] {
-    SyncFaultKmacOp,
-    SyncFaultKmacOut,
+    SyncFaultKdfOp,
+    SyncFaultKdfOut,
     SyncFaultSideSel,
     SyncFaultLastIdx
   } keymgr_dpe_sync_fault_e;
 
   typedef enum logic [3:0] {
-    AsyncFaultKmacCmd,
-    AsyncFaultKmacFsm,
-    AsyncFaultKmacDone,
+    AsyncFaultKdfCmd,
+    AsyncFaultKdfFsm,
+    AsyncFaultKdfDone,
     AsyncFaultRegIntg,
     AsyncFaultShadow,
     AsyncFaultFsmIntg,
@@ -413,11 +413,11 @@ package keymgr_dpe_pkg;
 
   // Bit position of fault status
   typedef enum logic [3:0] {
-    FaultKmacCmd,
-    FaultKmacFsm,
-    FaultKmacDone,
-    FaultKmacOp,
-    FaultKmacOut,
+    FaultKdfCmd,
+    FaultKdfFsm,
+    FaultKdfDone,
+    FaultKdfOp,
+    FaultKdfOut,
     FaultRegIntg,
     FaultShadow,
     FaultCtrlFsm,
