@@ -60,6 +60,28 @@ static const dif_keymgr_dpe_advance_params_t kOtbnKdfDpeContext = {
 };
 
 /**
+ * Parameters for generating a SW key from the derived DPE context.
+ */
+static const dif_keymgr_dpe_generate_params_t kOtbnKdfSwKeyParams = {
+    .key_dest = kDifKeymgrDpeKeyDestNone,
+    .sideload_key = false,
+    .salt = {0x8c2e4f17, 0x53a9d06b, 0xe17b3c95, 0x0d64f2a8, 0x9f05b7c3,
+             0x26d8e41a, 0xb3417f6e, 0x71ca90d2},
+    .version = 0x1,
+    .slot_src_sel = kOtbnKdfDpeContext.slot_dst_sel,
+};
+
+/**
+ * Places the fixed response in DMEM and starts the OTBN app. The app serves a
+ * single keymgr_dpe KDF request and then ends.
+ */
+static void otbn_kdf_app_start(dif_otbn_t *otbn) {
+  CHECK_STATUS_OK(otbn_testutils_write_data(otbn, sizeof(kOtbnResponse),
+                                            kOtbnResponse, kOtbnResponseAddr));
+  CHECK_STATUS_OK(otbn_testutils_execute(otbn));
+}
+
+/**
  * Smoketest which uses OTBN as KDF engine.
  */
 static void test_otbn_kdf(dif_keymgr_dpe_t *keymgr_dpe, dif_otbn_t *otbn) {
@@ -74,13 +96,9 @@ static void test_otbn_kdf(dif_keymgr_dpe_t *keymgr_dpe, dif_otbn_t *otbn) {
           ? parent_metadata.boot_stage + 1
           : kKeymgrDpeBootStageRuntime;
 
-  // Load the OTBN app and place the fixed response it returns in DMEM.
+  // Load the OTBN app and start it. It runs until the keymgr sends the message.
   CHECK_STATUS_OK(otbn_testutils_load_app(otbn, kOtbnAppKeymgrTest));
-  CHECK_STATUS_OK(otbn_testutils_write_data(otbn, sizeof(kOtbnResponse),
-                                            kOtbnResponse, kOtbnResponseAddr));
-
-  // Start the OTBN program. It runs until the keymgr sends the message.
-  CHECK_STATUS_OK(otbn_testutils_execute(otbn));
+  otbn_kdf_app_start(otbn);
 
   // Switch the KDF engine from KMAC to OTBN.
   CHECK_DIF_OK(
@@ -100,6 +118,34 @@ static void test_otbn_kdf(dif_keymgr_dpe_t *keymgr_dpe, dif_otbn_t *otbn) {
       kOtbnKdfDpeContext.slot_policy));
 }
 
+/**
+ * Generates a SW key from the derived DPE context with OTBN as KDF engine and
+ * checks the key against the response returned by the OTBN app.
+ */
+static void test_otbn_kdf_sw_key(dif_keymgr_dpe_t *keymgr_dpe,
+                                 dif_otbn_t *otbn) {
+  // Restart the OTBN app to serve the KDF request of the generate operation.
+  otbn_kdf_app_start(otbn);
+
+  // Generate a SW key. Only SW keys are written to the SW_SHARE*_OUTPUT
+  // registers, sideload keys are not readable by SW.
+  CHECK_STATUS_OK(
+      keymgr_dpe_testutils_generate_key(keymgr_dpe, &kOtbnKdfSwKeyParams));
+
+  // Verify that OTBN finished and raised no error.
+  CHECK_STATUS_OK(otbn_testutils_wait_for_done(otbn, kDifOtbnErrBitsNoError));
+
+  // keymgr_dpe outputs the lower 256 bits of each digest share. The OTBN app
+  // returns kOtbnResponse as both shares, so both output shares must match its
+  // first 32 bytes.
+  dif_keymgr_dpe_output_t key;
+  CHECK_DIF_OK(dif_keymgr_dpe_read_output(keymgr_dpe, &key));
+  CHECK_ARRAYS_EQ((const uint8_t *)key.value[0], kOtbnResponse,
+                  sizeof(key.value[0]));
+  CHECK_ARRAYS_EQ((const uint8_t *)key.value[1], kOtbnResponse,
+                  sizeof(key.value[1]));
+}
+
 bool test_main(void) {
   // Start keymgr_dpe, generating CreatorRootKey into the slot defined by
   // kCreatorRootKeyParams(/sw/device/lib/testing/keymgr_dpe_testutils.h)
@@ -116,6 +162,10 @@ bool test_main(void) {
 
   // DV SYNC MESSAGE
   LOG_INFO("KeymgrDpe derived DPE context with the OTBN (HKDF)");
+
+  // Generate a SW key from the derived DPE context using the OTBN as KDF.
+  test_otbn_kdf_sw_key(&keymgr_dpe, &otbn);
+  LOG_INFO("KeymgrDpe generated SW key with the OTBN (HKDF)");
 
   return true;
 }

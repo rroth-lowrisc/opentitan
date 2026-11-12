@@ -197,6 +197,8 @@
             - Select OTBN as KDF engine via `KDF_ENGINE_SHADOWED`.
             - Advance a DPE context and wait for OTBN to finish without errors.
             - Verify the metadata of the derived DPE context.
+            - Restart the OTBN app and generate a SW key from the derived DPE context.
+            - Verify that both SW output shares match the response returned by OTBN.
             - In simulation environments, verify that exactly one slot holds the derived key and
               that it differs from the `CreatorRootKey`.
             '''
