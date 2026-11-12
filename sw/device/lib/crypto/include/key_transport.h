@@ -64,7 +64,7 @@ otcrypto_status_t otcrypto_symmetric_keygen(
  *
  * The caller should partially populate the blinded key struct; they should set
  * the full key configuration and the keyblob length (32 bytes for sideloaded
- * keys, or 64 bytes if the key will be passed to `otcrypto_hw_backed_keygen`),
+ * keys, or 96 bytes if the key will be passed to `otcrypto_hw_backed_keygen`),
  * and then allocate that amount of space for the keyblob and set the keyblob
  * pointer.
  *

@@ -53,8 +53,8 @@ size_t keyblob_num_words(const otcrypto_key_config_t config);
  *
  * For HMAC and TDES keys, this rounds `config.key_length` up to the next word.
  * For all other key types, `config.key_length` must be a multiple of 32-bit
- * words (and 256 bits for hardware-backed symmetric keys), otherwise 0 is
- * returned.
+ * words (and exactly the sideload key size of 256 bits for hardware-backed
+ * symmetric keys), otherwise 0 is returned.
  *
  * @param config Key configuration.
  * @returns Word-length of one key share (or unblinded key), or 0 if invalid.
