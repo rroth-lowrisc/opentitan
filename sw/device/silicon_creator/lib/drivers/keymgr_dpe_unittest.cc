@@ -252,7 +252,16 @@ TEST_F(KeymgrDpeTest, KdfEngineSetOtbn) {
 
 TEST_F(KeymgrDpeTest, KdfEngineLock) {
   EXPECT_SEC_WRITE32(base_ + KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET, 0);
-  sc_keymgr_dpe_kdf_engine_lock();
+  EXPECT_ABS_READ32(base_ + KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET, 0);
+  EXPECT_EQ(sc_keymgr_dpe_kdf_engine_lock(), kErrorOk);
+}
+
+TEST_F(KeymgrDpeTest, KdfEngineLockReadbackMismatch) {
+  EXPECT_SEC_WRITE32(base_ + KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET, 0);
+  // The write did not take effect and the selection is still unlocked.
+  EXPECT_ABS_READ32(base_ + KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET,
+                    {{KEYMGR_DPE_KDF_ENGINE_REGWEN_EN_BIT, 1}});
+  EXPECT_EQ(sc_keymgr_dpe_kdf_engine_lock(), kErrorKeymgrInternal);
 }
 
 TEST_F(KeymgrDpeTest, SwBindingValueSet) {
@@ -535,9 +544,46 @@ TEST_F(KeymgrDpeTest, AdvanceDpeContext) {
 }
 
 TEST_F(KeymgrDpeTest, LockUds) {
-  EXPECT_ABS_WRITE32(base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
-                     kMultiBitBool4True);
-  sc_keymgr_dpe_lock_uds();
+  EXPECT_ABS_WRITE32(
+      base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, kMultiBitBool4True},
+      });
+  EXPECT_ABS_READ32(
+      base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, kMultiBitBool4True},
+      });
+  EXPECT_EQ(sc_keymgr_dpe_lock_uds(), kErrorOk);
+}
+
+TEST_F(KeymgrDpeTest, LockUdsInvalidEncoding) {
+  EXPECT_ABS_WRITE32(
+      base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, kMultiBitBool4True},
+      });
+  // Writing True must always read back as True, anything else is a fault.
+  EXPECT_ABS_READ32(base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+                    {
+                        {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, 0x1},
+                    });
+  EXPECT_EQ(sc_keymgr_dpe_lock_uds(), kErrorKeymgrInternal);
+}
+
+TEST_F(KeymgrDpeTest, LockUdsReadbackMismatch) {
+  EXPECT_ABS_WRITE32(
+      base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, kMultiBitBool4True},
+      });
+  // The write did not take effect and the lock is still open.
+  EXPECT_ABS_READ32(
+      base_ + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
+      {
+          {KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET, kMultiBitBool4False},
+      });
+  EXPECT_EQ(sc_keymgr_dpe_lock_uds(), kErrorKeymgrInternal);
 }
 
 TEST_F(KeymgrDpeTest, EnforceSwBinding) {

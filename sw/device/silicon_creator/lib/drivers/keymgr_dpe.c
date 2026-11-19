@@ -294,10 +294,18 @@ void sc_keymgr_dpe_kdf_engine_set(sc_keymgr_dpe_kdf_engine_t engine) {
 /**
  * Locks the KDF engine selection until the next reset.
  */
-void sc_keymgr_dpe_kdf_engine_lock(void) {
+rom_error_t sc_keymgr_dpe_kdf_engine_lock(void) {
   SEC_MMIO_ASSERT_WRITE_INCREMENT(kScKeymgrDPESecMmioKdfEngineLock, 1);
   sec_mmio_write32(
       sc_keymgr_dpe_base() + KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET, 0);
+  // Verify the correct value was written into the register
+  uint32_t regwen = abs_mmio_read32(sc_keymgr_dpe_base() +
+                                    KEYMGR_DPE_KDF_ENGINE_REGWEN_REG_OFFSET);
+  if (launder32(regwen) != 0u) {
+    return kErrorKeymgrInternal;
+  }
+  HARDENED_CHECK_EQ(regwen, 0u);
+  return kErrorOk;
 }
 
 /**
@@ -500,10 +508,20 @@ rom_error_t sc_keymgr_dpe_advance_dpe_context(
 /**
  * Write into the lock register for the UDS.
  */
-void sc_keymgr_dpe_lock_uds(void) {
+rom_error_t sc_keymgr_dpe_lock_uds(void) {
   abs_mmio_write32(
       sc_keymgr_dpe_base() + KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET,
-      kMultiBitBool4True);
+      kMultiBitBool4True << KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_OFFSET);
+  // Verify the correct value was written into the register
+  uint32_t lock = bitfield_field32_read(
+      abs_mmio_read32(sc_keymgr_dpe_base() +
+                      KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_REG_OFFSET),
+      KEYMGR_DPE_LOAD_ROOT_KEY_LOCK_LOCK_FIELD);
+  if (launder32(lock) != kMultiBitBool4True) {
+    return kErrorKeymgrInternal;
+  }
+  HARDENED_CHECK_EQ(lock, kMultiBitBool4True);
+  return kErrorOk;
 }
 
 /**

@@ -324,8 +324,12 @@ void sc_keymgr_dpe_kdf_engine_set(sc_keymgr_dpe_kdf_engine_t engine);
 
 /**
  * Locks the KDF engine selection until the next reset.
+ *
+ * @return `kErrorOk` if `KDF_ENGINE_REGWEN` reads back as locked,
+ * `kErrorKeymgrInternal` otherwise.
  */
-void sc_keymgr_dpe_kdf_engine_lock(void);
+OT_WARN_UNUSED_RESULT
+rom_error_t sc_keymgr_dpe_kdf_engine_lock(void);
 
 /**
  * Sets the key manager dpe software binding input.
@@ -458,8 +462,11 @@ rom_error_t sc_keymgr_dpe_advance_dpe_context(
  * generate an error as the uds is locked. This lock can only be released by
  * resetting the device.
  *
+ * @return `kErrorOk` if the lock reads back as `kMultiBitBool4True`,
+ * `kErrorKeymgrInternal` otherwise.
  */
-void sc_keymgr_dpe_lock_uds(void);
+OT_WARN_UNUSED_RESULT
+rom_error_t sc_keymgr_dpe_lock_uds(void);
 
 /**
  * Enforces the software binding as the only advance input until the next reset.
