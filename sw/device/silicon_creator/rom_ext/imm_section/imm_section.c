@@ -25,19 +25,19 @@
 #include "hw/top/otp_ctrl_regs.h"  // Generated.
 
 /**
- * Checks if the keymgr_dpe is enabled by the OTP
+ * Checks if the keymgr_dpe is disabled by the OTP
  *
- * TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
- * generation in the ROM section.
- *
- * @return kHardenedBoolTrue if the keymgr_dpe is enabled, kHardenedBoolFalse
+ * @return kHardenedBoolTrue if the keymgr_dpe is disabled, kHardenedBoolFalse
  * otherwise.
  */
 OT_WARN_UNUSED_RESULT
-static hardened_bool_t imm_section_keymgr_dpe_enabled(void) {
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
-  // generation in the ROM section.
-  return kHardenedBoolTrue;
+static hardened_bool_t imm_section_keymgr_dpe_disabled(void) {
+  uint32_t keymgr_dpe_disable =
+      otp_read32(OTP_CTRL_PARAM_OWNER_SW_CFG_ROM_KEYMGR_DISABLE_OFFSET);
+  if (launder32(keymgr_dpe_disable) == kHardenedBoolTrue) {
+    return kHardenedBoolTrue;
+  }
+  return kHardenedBoolFalse;
 }
 
 /**
@@ -79,12 +79,11 @@ static rom_error_t imm_section_start(void) {
   nvm_ctrl_cert_info_page_owner_restrict(kNvmInfoPageAttestationKeySeeds);
   nvm_ctrl_info_cfg_lock(kNvmInfoPageAttestationKeySeeds);
 
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
-  // generation in the ROM section.
-  hardened_bool_t keymgr_dpe_enabled = imm_section_keymgr_dpe_enabled();
+  hardened_bool_t keymgr_dpe_in_rom_disabled =
+      imm_section_keymgr_dpe_disabled();
   hardened_bool_t secret2_locked = imm_section_secret2_locked();
-  if (launder32(keymgr_dpe_enabled) == kHardenedBoolTrue) {
-    HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolTrue);
+  if (launder32(keymgr_dpe_in_rom_disabled) != kHardenedBoolTrue) {
+    HARDENED_CHECK_NE(keymgr_dpe_in_rom_disabled, kHardenedBoolTrue);
 
     // Without a locked SECRET2 partition the hardware does not release the
     // creator root key, which results in a fatal error if the keymgr dpe
@@ -119,7 +118,7 @@ static rom_error_t imm_section_start(void) {
       // should not brick the ROM code.
     }
   } else {
-    HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolFalse);
+    HARDENED_CHECK_EQ(keymgr_dpe_in_rom_disabled, kHardenedBoolTrue);
     // TODO(#30811): Fallback solution: Only generate the attestation
     // CreatorRootKey here
     // 1. Start the entropy complex

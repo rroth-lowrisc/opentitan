@@ -564,19 +564,19 @@ static rom_error_t rom_measure_otp_partitions(
 }
 
 /**
- * Checks if the keymgr_dpe is enabled by the OTP
+ * Checks if the keymgr_dpe is disabled by the OTP
  *
- * TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
- * generation in the ROM section.
- *
- * @return kHardenedBoolTrue if the keymgr_dpe is enabled, kHardenedBoolFalse
+ * @return kHardenedBoolTrue if the keymgr_dpe is disabled, kHardenedBoolFalse
  * otherwise.
  */
 OT_WARN_UNUSED_RESULT
-static hardened_bool_t rom_keymgr_dpe_enabled(void) {
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
-  // generation in the ROM section.
-  return kHardenedBoolTrue;
+static hardened_bool_t rom_keymgr_dpe_disabled(void) {
+  uint32_t keymgr_dpe_disable =
+      otp_read32(OTP_CTRL_PARAM_OWNER_SW_CFG_ROM_KEYMGR_DISABLE_OFFSET);
+  if (launder32(keymgr_dpe_disable) == kHardenedBoolTrue) {
+    return kHardenedBoolTrue;
+  }
+  return kHardenedBoolFalse;
 }
 
 /**
@@ -635,12 +635,12 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   // Keymgr_dpe must be in the reset state
   HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_state_check(kScKeymgrDPEStateReset));
 
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
-  // generation in the ROM section.
-  hardened_bool_t keymgr_dpe_enabled = rom_keymgr_dpe_enabled();
+  // Do not move the keymgr_dpe into the available state if the
+  // OWNER_SW_CFG_ROM_KEYMGR_DISABLE is set.
+  hardened_bool_t keymgr_dpe_disabled = rom_keymgr_dpe_disabled();
   hardened_bool_t secret2_locked = rom_secret2_locked();
-  if (launder32(keymgr_dpe_enabled) == kHardenedBoolTrue) {
-    HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolTrue);
+  if (launder32(keymgr_dpe_disabled) != kHardenedBoolTrue) {
+    HARDENED_CHECK_NE(keymgr_dpe_disabled, kHardenedBoolTrue);
 
     // Without a locked SECRET2 partition the hardware does not release the
     // creator root key, which results in a fatal error if the keymgr dpe
@@ -670,7 +670,7 @@ static rom_error_t rom_boot(const manifest_t *manifest,
       // should not brick the ROM code.
     }
   } else {
-    HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolFalse);
+    HARDENED_CHECK_EQ(keymgr_dpe_disabled, kHardenedBoolTrue);
     // TODO(#30811): Verify all REGWEN register remain locked until the first
     // derivation in the Available state.
     // Bypass the CREATOR_ROOT_KEY generation in ROM according to issue #564
@@ -686,11 +686,9 @@ static rom_error_t rom_boot(const manifest_t *manifest,
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/3);
 
-  // TODO(#30811): Read DISABLE_KEYMGR_DPE field to jump the CreatorRootKey
-  // generation in the ROM section.
   // Derive the CreatorRootKeys from the UDS
-  if (launder32(keymgr_dpe_enabled) == kHardenedBoolTrue) {
-    HARDENED_CHECK_EQ(keymgr_dpe_enabled, kHardenedBoolTrue);
+  if (launder32(keymgr_dpe_disabled) != kHardenedBoolTrue) {
+    HARDENED_CHECK_NE(keymgr_dpe_disabled, kHardenedBoolTrue);
 
     // Without a locked SECRET2 partition the hardware does not release the
     // creator root key, which results in a fatal error if the keymgr dpe
