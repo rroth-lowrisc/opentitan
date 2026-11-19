@@ -60,16 +60,17 @@ It has been generated with ./util/topgen.py -t hw/top_earlgrey/data/top_earlgrey
 |         |                           |            |              |      32bit       |                      OWNER_SW_CFG_ROM_ALERT_DIGEST_RMA                      |     0x3CC      |     4      |
 |         |                           |            |              |      32bit       |               OWNER_SW_CFG_ROM_WATCHDOG_BITE_THRESHOLD_CYCLES               |     0x3D0      |     4      |
 |         |                           |            |              |      32bit       |                     OWNER_SW_CFG_ROM_KEYMGR_OTP_MEAS_EN                     |     0x3D4      |     4      |
-|         |                           |            |              |      32bit       |                          OWNER_SW_CFG_MANUF_STATE                           |     0x3D8      |     4      |
-|         |                           |            |              |      32bit       |                       OWNER_SW_CFG_ROM_RSTMGR_INFO_EN                       |     0x3DC      |     4      |
-|         |                           |            |              |      32bit       |                      OWNER_SW_CFG_ROM_EXT_BOOTSTRAP_EN                      |     0x3E0      |     4      |
-|         |                           |            |              |      32bit       |                   OWNER_SW_CFG_ROM_SENSOR_CTRL_ALERT_CFG                    |     0x3E4      |     12     |
-|         |                           |            |              |      32bit       |                      OWNER_SW_CFG_ROM_SRAM_READBACK_EN                      |     0x3F0      |     4      |
-|         |                           |            |              |      32bit       |                  OWNER_SW_CFG_ROM_PRESERVE_RESET_REASON_EN                  |     0x3F4      |     4      |
-|         |                           |            |              |      32bit       |                  OWNER_SW_CFG_ROM_RESET_REASON_CHECK_VALUE                  |     0x3F8      |     4      |
-|         |                           |            |              |      32bit       |                         OWNER_SW_CFG_ROM_BANNER_EN                          |     0x3FC      |     4      |
-|         |                           |            |              |      32bit       |                   OWNER_SW_CFG_ROM_NVM_ECC_EXC_HANDLER_EN                   |     0x400      |     4      |
-|         |                           |            |              |      32bit       |                            OWNER_SW_CFG_RESERVED                            |     0x404      |     96     |
+|         |                           |            |              |      32bit       |                       OWNER_SW_CFG_ROM_KEYMGR_DISABLE                       |     0x3D8      |     4      |
+|         |                           |            |              |      32bit       |                          OWNER_SW_CFG_MANUF_STATE                           |     0x3DC      |     4      |
+|         |                           |            |              |      32bit       |                       OWNER_SW_CFG_ROM_RSTMGR_INFO_EN                       |     0x3E0      |     4      |
+|         |                           |            |              |      32bit       |                      OWNER_SW_CFG_ROM_EXT_BOOTSTRAP_EN                      |     0x3E4      |     4      |
+|         |                           |            |              |      32bit       |                   OWNER_SW_CFG_ROM_SENSOR_CTRL_ALERT_CFG                    |     0x3E8      |     12     |
+|         |                           |            |              |      32bit       |                      OWNER_SW_CFG_ROM_SRAM_READBACK_EN                      |     0x3F4      |     4      |
+|         |                           |            |              |      32bit       |                  OWNER_SW_CFG_ROM_PRESERVE_RESET_REASON_EN                  |     0x3F8      |     4      |
+|         |                           |            |              |      32bit       |                  OWNER_SW_CFG_ROM_RESET_REASON_CHECK_VALUE                  |     0x3FC      |     4      |
+|         |                           |            |              |      32bit       |                         OWNER_SW_CFG_ROM_BANNER_EN                          |     0x400      |     4      |
+|         |                           |            |              |      32bit       |                   OWNER_SW_CFG_ROM_NVM_ECC_EXC_HANDLER_EN                   |     0x404      |     4      |
+|         |                           |            |              |      32bit       |                            OWNER_SW_CFG_RESERVED                            |     0x408      |     96     |
 |         |                           |            |              |      64bit       |              [OWNER_SW_CFG_DIGEST](#Reg_owner_sw_cfg_digest_0)              |     0x468      |     8      |
 |    3    | ROT_CREATOR_AUTH_CODESIGN |    472     |      no      |      32bit       |                  ROT_CREATOR_AUTH_CODESIGN_ECDSA_KEY_TYPE0                  |     0x470      |     4      |
 |         |                           |            |              |      32bit       |                    ROT_CREATOR_AUTH_CODESIGN_ECDSA_KEY0                     |     0x474      |     64     |

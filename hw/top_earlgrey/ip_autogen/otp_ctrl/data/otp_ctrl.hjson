@@ -969,10 +969,22 @@
       default: "4",
       local: "true"
     },
+    { name: "OwnerSwCfgRomKeymgrDisableOffset",
+      desc: "Offset of OWNER_SW_CFG_ROM_KEYMGR_DISABLE",
+      type: "int",
+      default: "984",
+      local: "true"
+    },
+    { name: "OwnerSwCfgRomKeymgrDisableSize",
+      desc: "Size of OWNER_SW_CFG_ROM_KEYMGR_DISABLE",
+      type: "int",
+      default: "4",
+      local: "true"
+    },
     { name: "OwnerSwCfgManufStateOffset",
       desc: "Offset of OWNER_SW_CFG_MANUF_STATE",
       type: "int",
-      default: "984",
+      default: "988",
       local: "true"
     },
     { name: "OwnerSwCfgManufStateSize",
@@ -984,7 +996,7 @@
     { name: "OwnerSwCfgRomRstmgrInfoEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_RSTMGR_INFO_EN",
       type: "int",
-      default: "988",
+      default: "992",
       local: "true"
     },
     { name: "OwnerSwCfgRomRstmgrInfoEnSize",
@@ -996,7 +1008,7 @@
     { name: "OwnerSwCfgRomExtBootstrapEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_EXT_BOOTSTRAP_EN",
       type: "int",
-      default: "992",
+      default: "996",
       local: "true"
     },
     { name: "OwnerSwCfgRomExtBootstrapEnSize",
@@ -1008,7 +1020,7 @@
     { name: "OwnerSwCfgRomSensorCtrlAlertCfgOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_SENSOR_CTRL_ALERT_CFG",
       type: "int",
-      default: "996",
+      default: "1000",
       local: "true"
     },
     { name: "OwnerSwCfgRomSensorCtrlAlertCfgSize",
@@ -1020,7 +1032,7 @@
     { name: "OwnerSwCfgRomSramReadbackEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_SRAM_READBACK_EN",
       type: "int",
-      default: "1008",
+      default: "1012",
       local: "true"
     },
     { name: "OwnerSwCfgRomSramReadbackEnSize",
@@ -1032,7 +1044,7 @@
     { name: "OwnerSwCfgRomPreserveResetReasonEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_PRESERVE_RESET_REASON_EN",
       type: "int",
-      default: "1012",
+      default: "1016",
       local: "true"
     },
     { name: "OwnerSwCfgRomPreserveResetReasonEnSize",
@@ -1044,7 +1056,7 @@
     { name: "OwnerSwCfgRomResetReasonCheckValueOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_RESET_REASON_CHECK_VALUE",
       type: "int",
-      default: "1016",
+      default: "1020",
       local: "true"
     },
     { name: "OwnerSwCfgRomResetReasonCheckValueSize",
@@ -1056,7 +1068,7 @@
     { name: "OwnerSwCfgRomBannerEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_BANNER_EN",
       type: "int",
-      default: "1020",
+      default: "1024",
       local: "true"
     },
     { name: "OwnerSwCfgRomBannerEnSize",
@@ -1068,7 +1080,7 @@
     { name: "OwnerSwCfgRomNvmEccExcHandlerEnOffset",
       desc: "Offset of OWNER_SW_CFG_ROM_NVM_ECC_EXC_HANDLER_EN",
       type: "int",
-      default: "1024",
+      default: "1028",
       local: "true"
     },
     { name: "OwnerSwCfgRomNvmEccExcHandlerEnSize",
@@ -1080,7 +1092,7 @@
     { name: "OwnerSwCfgReservedOffset",
       desc: "Offset of OWNER_SW_CFG_RESERVED",
       type: "int",
-      default: "1028",
+      default: "1032",
       local: "true"
     },
     { name: "OwnerSwCfgReservedSize",
