@@ -700,6 +700,17 @@
                     '''
                 }
                 {
+                    name: "OWNER_SW_CFG_ROM_KEYMGR_DISABLE",
+                    size: "4",
+                    desc: '''
+                    Whether or not the ROM skips loading the UDS and deriving
+                    the CreatorRootKeys, leaving them to the immutable ROM_EXT
+                    section. If skipped, the keymgr_dpe stays in the Reset
+                    state. A value of kHardenedBoolTrue skips, all other values
+                    do not.
+                    '''
+                }
+                {
                     name: "OWNER_SW_CFG_MANUF_STATE",
                     size: "4",
                     desc: '''

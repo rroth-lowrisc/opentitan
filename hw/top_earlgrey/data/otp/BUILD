@@ -126,6 +126,9 @@ otp_json(
                 # readable OTP partitions as the key manager attestation binding
                 # value.
                 "OWNER_SW_CFG_ROM_KEYMGR_OTP_MEAS_EN": otp_hex(0x0),
+                # Set to `CONST.HARDENED_TRUE` to skip all keymgr_dpe operations
+                # in the ROM.
+                "OWNER_SW_CFG_ROM_KEYMGR_DISABLE": otp_hex(CONST.HARDENED_FALSE),
                 # Report errors without any redaction.
                 "OWNER_SW_CFG_ROM_ERROR_REPORTING": otp_hex(CONST.SHUTDOWN.REDACT.NONE),
                 # Set the enables to kAlertEnableNone.
