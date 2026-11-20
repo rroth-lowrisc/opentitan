@@ -188,6 +188,9 @@ otp_json(
                 # Leave the keymgr_dpe KDF engine selection unlocked. Any other
                 # value locks it in the ROM.
                 "OWNER_SW_CFG_ROM_KEYMGR_KDF_ENGINE_SELECTION_REGWEN": otp_hex(CONST.HARDENED_FALSE),
+                # Leave the keymgr_dpe root key load unlocked. Any other value
+                # locks it in the ROM.
+                "OWNER_SW_CFG_ROM_KEYMGR_LOCK_CREATOR_ROOT_KEY": otp_hex(CONST.HARDENED_FALSE),
                 "OWNER_SW_CFG_MANUF_STATE": otp_hex(0x0),
                 "OWNER_SW_CFG_ROM_RSTMGR_INFO_EN": otp_hex(0x0),
                 # Disable ROM_EXT recovery feature.

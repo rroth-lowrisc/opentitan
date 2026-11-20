@@ -731,6 +731,16 @@
                     '''
                 }
                 {
+                    name: "OWNER_SW_CFG_ROM_KEYMGR_LOCK_CREATOR_ROOT_KEY",
+                    size: "4",
+                    desc: '''
+                    Whether or not the ROM locks the keymgr_dpe `load root key`
+                    operation (LOAD_ROOT_KEY_LOCK) before leaving the ROM. A
+                    value of kHardenedBoolFalse leaves it unlocked, all other
+                    values lock.
+                    '''
+                }
+                {
                     name: "OWNER_SW_CFG_MANUF_STATE",
                     size: "4",
                     desc: '''
