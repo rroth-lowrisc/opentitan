@@ -782,6 +782,16 @@ static rom_error_t rom_boot(const manifest_t *manifest,
     }
   }
 
+  // Lock the keymgr_dpe load root key (UDS) operation
+  uint32_t keymgr_dpe_lock_creator_root_key = otp_read32(
+      OTP_CTRL_PARAM_OWNER_SW_CFG_ROM_KEYMGR_LOCK_CREATOR_ROOT_KEY_OFFSET);
+  if (launder32(keymgr_dpe_lock_creator_root_key) != kHardenedBoolFalse) {
+    HARDENED_CHECK_NE(keymgr_dpe_lock_creator_root_key, kHardenedBoolFalse);
+    HARDENED_RETURN_IF_ERROR(sc_keymgr_dpe_lock_uds());
+  } else {
+    HARDENED_CHECK_EQ(keymgr_dpe_lock_creator_root_key, kHardenedBoolFalse);
+  }
+
   // Verify the values written by the sec_mmio... framework
   sec_mmio_check_values(rnd_uint32());
   sec_mmio_check_counters(/*expected_check_count=*/5);
