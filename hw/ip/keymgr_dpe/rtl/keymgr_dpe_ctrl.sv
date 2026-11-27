@@ -376,6 +376,49 @@ module keymgr_dpe_ctrl
     endcase // unique case (update_sel)
   end
 
+  //////////////////////////
+  // ECC Decoding
+  //////////////////////////
+
+  logic [SecDecKeyRounds:0][1:0]                  ecc_error_decode;
+  logic                                           ecc_error;
+
+  logic [SecDecMetaEccWidth-1:0]                  ecc_eval_meta_enc;
+  logic [SecDecMetaDataWidth-1:0]                 ecc_eval_meta_data;
+  logic [(SecDecKeyRounds*SecDecKeyEccWidth)-1:0] ecc_eval_key_enc;
+
+  // Extract the ECC from the current slot
+  assign ecc_eval_meta_enc = ecc_metadata_q[slot_src_sel_ecc][SecDecMetaEccWidth-1:0];
+  assign ecc_eval_key_enc  = ecc_metadata_q[slot_src_sel_ecc][SecDecEccWidth-1:SecDecMetaEccWidth];
+
+  // Assign the metadata from the selected source slot
+  assign ecc_eval_meta_data = SecDecMetaDataWidth'(
+      {slot_src_sel_data, extract_metadata_from_slot(key_slots_q[slot_src_sel_ecc])});
+
+  // Decode the metadata ecc
+  prim_secded_64_57_dec u_ecc_meta_dec (
+    .data_i({ecc_eval_meta_enc, ecc_eval_meta_data}),
+    .data_o(),
+    .syndrome_o(),
+    .err_o(ecc_error_decode[0])
+  );
+
+  // Decode the key ecc
+  for (genvar i = 0; i < SecDecKeyRounds; i++) begin : gen_ecc_decode_key
+    logic [SecDecKeyDataWidth-1:0] ecc_eval_key_data;
+    assign ecc_eval_key_data = op_start_i ?
+        key_slots_q[slot_src_sel_ecc].key[0][(i*SecDecKeyDataWidth) +: SecDecKeyDataWidth] :
+        SecDecKeyDataWidth'(entropy_i[0]);
+    prim_secded_137_128_dec u_ecc_key_dec (
+      .data_i({ecc_eval_key_enc[(i*SecDecKeyEccWidth) +: SecDecKeyEccWidth], ecc_eval_key_data}),
+      .data_o(),
+      .syndrome_o(),
+      .err_o(ecc_error_decode[i+1])
+    );
+  end
+
+  // Only raise the ECC error if an operation is ongoing
+  assign ecc_error = (|ecc_error_decode) && op_start_i && active_key_slot_o.valid;
 
   //////////////////////////
   // Main Control FSM
@@ -405,7 +448,6 @@ module keymgr_dpe_ctrl
                           {EntropyRounds{entropy_i[i]}};
   end
 
-  // TODO(#384): Enable ECC so that we have key integrity
   //SEC_CM: CTRL.KEY.INTEGRITY
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -862,6 +904,7 @@ module keymgr_dpe_ctrl
                                       invalid_kdf_engine     |
                                       enforce_sw_binding_err |
                                       slot_src_sel_oob_i     |
+                                      ecc_error              |
                                       slot_dst_sel_oob_i);
 
   assign invalid_erase = erase_req & (~destination_slot_valid |
@@ -872,6 +915,7 @@ module keymgr_dpe_ctrl
                                   ~active_slot_policy.allow_keygen |
                                   ~key_version_vld_o               |
                                   dest_sel_oob_i                   |
+                                  ecc_error                        |
                                   slot_src_sel_oob_i);
 
   // SEC_CM: LOAD_ROOT_KEY_LOCK.CTRL.LOCK_MUBI
@@ -928,8 +972,7 @@ module keymgr_dpe_ctrl
     .ctrl_fsm_err_i(state_intg_err_q | state_intg_err_d),
     .data_fsm_err_i(data_fsm_err),
     .op_fsm_err_i(op_fsm_err),
-    // TODO(#384): Implement ECC protection for key slot, and connect the error signal here
-    .ecc_err_i(1'b0),
+    .ecc_err_i(ecc_error),
     // TODO(#384): Implement redundant check for state change
     .state_change_err_i(1'b0),
     // TODO(#384): Implement redundant check for (state, operation) pair
