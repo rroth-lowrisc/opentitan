@@ -207,27 +207,39 @@ Other values are reserved.
 Key manager operation controls
 - Offset: `0x18`
 - Reset default: `0x10`
-- Reset mask: `0x5df870`
+- Reset mask: `0x775df870`
 - Register enable: [`CFG_REGWEN`](#cfg_regwen)
 
 ### Fields
 
 ```wavejson
-{"reg": [{"bits": 4}, {"name": "OPERATION", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 4}, {"name": "DEST_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"name": "SLOT_SRC_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SLOT_DST_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SW_BINDING_ONLY", "bits": 1, "attr": ["rw"], "rotate": -90}, {"bits": 9}], "config": {"lanes": 1, "fontsize": 10, "vspace": 170}}
+{"reg": [{"bits": 4}, {"name": "OPERATION", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 4}, {"name": "DEST_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"name": "SLOT_SRC_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SLOT_DST_SEL", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SW_BINDING_ONLY", "bits": 1, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SLOT_SRC_SEL_SHADOWED", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}, {"name": "SLOT_DST_SEL_SHADOWED", "bits": 3, "attr": ["rw"], "rotate": -90}, {"bits": 1}], "config": {"lanes": 1, "fontsize": 10, "vspace": 230}}
 ```
 
-|  Bits  |  Type  |  Reset  | Name                                                  |
-|:------:|:------:|:-------:|:------------------------------------------------------|
-| 31:23  |        |         | Reserved                                              |
-|   22   |   rw   |   0x0   | [SW_BINDING_ONLY](#control_shadowed--sw_binding_only) |
-|   21   |        |         | Reserved                                              |
-| 20:18  |   rw   |   0x0   | [SLOT_DST_SEL](#control_shadowed--slot_dst_sel)       |
-|   17   |        |         | Reserved                                              |
-| 16:14  |   rw   |   0x0   | [SLOT_SRC_SEL](#control_shadowed--slot_src_sel)       |
-| 13:11  |   rw   |   0x0   | [DEST_SEL](#control_shadowed--dest_sel)               |
-|  10:7  |        |         | Reserved                                              |
-|  6:4   |   rw   |   0x1   | [OPERATION](#control_shadowed--operation)             |
-|  3:0   |        |         | Reserved                                              |
+|  Bits  |  Type  |  Reset  | Name                                                              |
+|:------:|:------:|:-------:|:------------------------------------------------------------------|
+|   31   |        |         | Reserved                                                          |
+| 30:28  |   rw   |   0x0   | [SLOT_DST_SEL_SHADOWED](#control_shadowed--slot_dst_sel_shadowed) |
+|   27   |        |         | Reserved                                                          |
+| 26:24  |   rw   |   0x0   | [SLOT_SRC_SEL_SHADOWED](#control_shadowed--slot_src_sel_shadowed) |
+|   23   |        |         | Reserved                                                          |
+|   22   |   rw   |   0x0   | [SW_BINDING_ONLY](#control_shadowed--sw_binding_only)             |
+|   21   |        |         | Reserved                                                          |
+| 20:18  |   rw   |   0x0   | [SLOT_DST_SEL](#control_shadowed--slot_dst_sel)                   |
+|   17   |        |         | Reserved                                                          |
+| 16:14  |   rw   |   0x0   | [SLOT_SRC_SEL](#control_shadowed--slot_src_sel)                   |
+| 13:11  |   rw   |   0x0   | [DEST_SEL](#control_shadowed--dest_sel)                           |
+|  10:7  |        |         | Reserved                                                          |
+|  6:4   |   rw   |   0x1   | [OPERATION](#control_shadowed--operation)                         |
+|  3:0   |        |         | Reserved                                                          |
+
+### CONTROL_SHADOWED . SLOT_DST_SEL_SHADOWED
+Must be programmed to the same value as `SLOT_DST_SEL`.
+A mismatch will reject any operation.
+
+### CONTROL_SHADOWED . SLOT_SRC_SEL_SHADOWED
+Must be programmed to the same value as `SLOT_SRC_SEL`.
+A mismatch will reject any operation.
 
 ### CONTROL_SHADOWED . SW_BINDING_ONLY
 Only apply software binding as a message input to the advance operation.

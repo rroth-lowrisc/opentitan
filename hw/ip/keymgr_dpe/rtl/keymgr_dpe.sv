@@ -379,17 +379,24 @@ module keymgr_dpe
   // Indicate Out-of-Bound for source / destination selection if the request matches
   // a non-instantiated slot.
   if (NumInstHwSlot < NumMaxHwSlot) begin : gen_oob_slot_selection
-    assign slot_src_sel_oob = (reg2hw.control_shadowed.slot_src_sel.q >= NumInstHwSlot);
-    assign slot_dst_sel_oob = (reg2hw.control_shadowed.slot_dst_sel.q >= NumInstHwSlot);
+    assign slot_src_sel_oob = (reg2hw.control_shadowed.slot_src_sel.q >= NumInstHwSlot) ||
+                              (reg2hw.control_shadowed.slot_src_sel_shadowed.q >= NumInstHwSlot);
+    assign slot_dst_sel_oob = (reg2hw.control_shadowed.slot_dst_sel.q >= NumInstHwSlot) ||
+                              (reg2hw.control_shadowed.slot_dst_sel_shadowed.q >= NumInstHwSlot);
   end else begin : gen_no_oob_slot_selection
     assign slot_src_sel_oob = 1'b0;
     assign slot_dst_sel_oob = 1'b0;
   end
   keymgr_dpe_slot_idx_e slot_src_sel_trunc, slot_dst_sel_trunc;
+  keymgr_dpe_slot_idx_e slot_src_sel_shadowed_trunc, slot_dst_sel_shadowed_trunc;
   assign slot_src_sel_trunc =
       keymgr_dpe_slot_idx_e'(reg2hw.control_shadowed.slot_src_sel.q);
+  assign slot_src_sel_shadowed_trunc =
+      keymgr_dpe_slot_idx_e'(reg2hw.control_shadowed.slot_src_sel_shadowed.q);
   assign slot_dst_sel_trunc =
       keymgr_dpe_slot_idx_e'(reg2hw.control_shadowed.slot_dst_sel.q);
+  assign slot_dst_sel_shadowed_trunc =
+      keymgr_dpe_slot_idx_e'(reg2hw.control_shadowed.slot_dst_sel_shadowed.q);
 
   // SEC_CM: INTERNAL.KEY.SW_NOACCESS
   keymgr_dpe_ctrl # (
@@ -417,6 +424,8 @@ module keymgr_dpe
     .load_secondary_root_key_lock_i(mubi4_t'(reg2hw.load_secondary_root_key_lock.q)),
     .slot_src_sel_i(slot_src_sel_trunc),
     .slot_dst_sel_i(slot_dst_sel_trunc),
+    .slot_src_sel_shadowed_i(slot_src_sel_shadowed_trunc),
+    .slot_dst_sel_shadowed_i(slot_dst_sel_shadowed_trunc),
     .slot_policy_i(keymgr_dpe_policy_t'(reg2hw.slot_policy)),
     .enforce_sw_binding_err_i(enforce_sw_binding_err),
     .max_key_version_i(reg2hw.max_key_ver_shadowed),

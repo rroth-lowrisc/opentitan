@@ -726,6 +726,7 @@
             and no slot is modified.
           '''
         },
+
         {
           bits: "22"
           name: "SW_BINDING_ONLY"
@@ -734,6 +735,24 @@
             Only apply software binding as a message input to the advance operation.
 
             See !!ENFORCE_SW_BINDING to make this mandatory for all advance calls until the next reset.
+          '''
+        },
+
+        { bits: "26:24",
+          name: "SLOT_SRC_SEL_SHADOWED",
+          resval: "0x0"
+          desc: '''
+            Must be programmed to the same value as `SLOT_SRC_SEL`.
+            A mismatch will reject any operation.
+          '''
+        },
+
+        { bits: "30:28",
+          name: "SLOT_DST_SEL_SHADOWED",
+          resval: "0x0"
+          desc: '''
+            Must be programmed to the same value as `SLOT_DST_SEL`.
+            A mismatch will reject any operation.
           '''
         }
       ],

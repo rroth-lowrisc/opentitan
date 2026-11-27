@@ -40,8 +40,10 @@ module keymgr_dpe_ctrl
   input keymgr_dpe_ops_e op_i,
   input mubi4_t load_root_key_lock_i,
   input mubi4_t load_secondary_root_key_lock_i,
-  input [NumInstHwSlotWidth-1:0] slot_src_sel_i,
-  input [NumInstHwSlotWidth-1:0] slot_dst_sel_i,
+  input logic [NumInstHwSlotWidth-1:0] slot_src_sel_i,
+  input logic [NumInstHwSlotWidth-1:0] slot_dst_sel_i,
+  input logic [NumInstHwSlotWidth-1:0] slot_src_sel_shadowed_i,
+  input logic [NumInstHwSlotWidth-1:0] slot_dst_sel_shadowed_i,
   input keymgr_dpe_policy_t slot_policy_i,
   input mubi4_t enforce_sw_binding_err_i,
    // `max_key_version_i` is stored during advance to be compared with `key_version_i` during
@@ -257,6 +259,13 @@ module keymgr_dpe_ctrl
   end
 
   assign prng_en_o = random_req | wipe_req | prng_en_dis_inv_q[0];
+
+  //////////////////////////
+  // ECC
+  //////////////////////////
+
+  logic unused_shadow_selection;
+  assign unused_shadow_selection = ^{slot_src_sel_shadowed_i, slot_dst_sel_shadowed_i};
 
   //////////////////////////
   // Main Control FSM
