@@ -261,11 +261,121 @@ module keymgr_dpe_ctrl
   assign prng_en_o = random_req | wipe_req | prng_en_dis_inv_q[0];
 
   //////////////////////////
-  // ECC
+  // ECC Encoding
   //////////////////////////
 
-  logic unused_shadow_selection;
-  assign unused_shadow_selection = ^{slot_src_sel_shadowed_i, slot_dst_sel_shadowed_i};
+
+  // TODO(rroth): The ECC can be done with address infection! However the problem
+  // arises if the dst/src selection is faulted from the FF onwards. Nothing
+  // protects against writing everything correctly into a wrong slot.
+  // This local duplication can not be faulted with a single FI as its
+  // only possible to fault `ctrl_reg_update_i` or the selection!
+
+  // Update the slot and the ecc with two different copies of the same
+  // signal. This protects against single FI attacks.
+  // Rename the signal.
+  logic [NumInstHwSlotWidth-1:0] slot_src_sel_data, slot_src_sel_ecc;
+  logic [NumInstHwSlotWidth-1:0] slot_dst_sel_data, slot_dst_sel_ecc;
+  assign slot_src_sel_data = slot_src_sel_i;
+  assign slot_src_sel_ecc = slot_src_sel_shadowed_i;
+  assign slot_dst_sel_data = slot_dst_sel_i;
+  assign slot_dst_sel_ecc = slot_dst_sel_shadowed_i;
+
+  // TODO(rroth): check if signal are out of sync!
+
+  // This not only helps on FI to the metadata but by taking the shadow_dst_i signal
+  // we can also control that the store / load is taken from the same slot!
+  localparam int unsigned SecDecKeyDataWidth = 128;
+  localparam int unsigned SecDecKeyEccWidth = 9;
+  // TODO(rroth): Analyze with claude Area increase - Potentially only 128b instead of 384b
+  localparam int unsigned SecDecKeyRounds = InternalKeyWidth / SecDecKeyDataWidth;
+  localparam int unsigned SecDecMetaDataWidth = 57;
+  localparam int unsigned SecDecMetaEccWidth = 7;
+  localparam int unsigned SecDecEccWidth =
+      SecDecMetaEccWidth + (SecDecKeyRounds * SecDecKeyEccWidth);
+  `ASSERT_INIT(SecDecKeyNotCovered_A, InternalKeyWidth % SecDecKeyDataWidth == 0)
+  `ASSERT_INIT(SecDecMetaNotConvered_A,
+      (NumInstHwSlotWidth + $bits(keymgr_dpe_metadata_slot_t)) <= SecDecMetaDataWidth)
+  typedef logic [SecDecEccWidth-1:0] ecc_t;
+
+  // ECC only uses share0 of the key. Faulting only share1 into another slot
+  // will result in an invalid key anyway and the logic size can be cut in half.
+  logic [InternalKeyWidth-1:0]    key_sel_slot;
+  logic [SecDecMetaDataWidth-1:0] metadata_sel_slot;
+  ecc_t                           ecc_selected_slot;
+  ecc_t [NumInstHwSlot-1:0]       ecc_metadata_q, ecc_metadata_d;
+
+  // Assign the metadata and key share0 for the ECC calculation
+  assign metadata_sel_slot = SecDecMetaDataWidth'(
+      {slot_dst_sel_data, extract_metadata_from_slot(key_slots_d[slot_dst_sel_ecc])});
+  assign key_sel_slot = key_slots_d[slot_dst_sel_ecc].key[0];
+
+  // Encode the metadata from the selected slot
+  // The metadata itself are stripped from the output of the encoder
+  logic [SecDecMetaEccWidth-1:0]  ecc_meta;
+  logic [SecDecMetaDataWidth-1:0] unused_meta_data;
+  prim_secded_64_57_enc u_ecc_meta_enc (
+    .data_i(metadata_sel_slot),
+    .data_o({ecc_meta, unused_meta_data})
+  );
+
+  logic [(SecDecKeyRounds*SecDecKeyEccWidth)-1:0] ecc_key;
+  logic [SecDecKeyRounds-1:0][SecDecKeyDataWidth-1:0] unused_key_data;
+  for (genvar i = 0; i < SecDecKeyRounds; i++) begin : gen_ecc_encode_key
+    prim_secded_137_128_enc u_ecc_key_enc (
+      .data_i(key_sel_slot[(i*SecDecKeyDataWidth) +: SecDecKeyDataWidth]),
+      .data_o({ecc_key[(i*SecDecKeyEccWidth) +: SecDecKeyEccWidth], unused_key_data[i]})
+    );
+  end
+
+  assign ecc_selected_slot = {ecc_key, ecc_meta};
+
+  //SEC_CM: CTRL.KEY.INTEGRITY
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      ecc_metadata_q <= '0;
+    end else begin
+      ecc_metadata_q <= ecc_metadata_d;
+    end
+  end
+
+  // Calculate the ECC if the slot is updated
+  always_comb begin
+    ecc_metadata_d = ecc_metadata_q;
+
+    unique case (update_sel)
+
+      // Only used at boot before any slot is valid. Invalid slots are not ECC-checked, so
+      // all entries are simply cleared.
+      SlotDestRandomize: begin
+        ecc_metadata_d = '0;
+      end
+
+      // The only updates that set `valid`. ECC is written in the same cycle via the redundant
+      // copy `slot_dst_sel_ecc` and embeds `slot_dst_sel_data` (address infection), so a fault
+      // on either copy causes an ECC mismatch on read.
+      SlotLoadRoot,
+      SlotLoadSecondaryRoot,
+      SlotLoadFromKmac: begin
+        ecc_metadata_d[slot_dst_sel_ecc] = ecc_selected_slot;
+      end
+
+      // Erased slot is invalid and thus not ECC-checked. A later load writes a fresh ECC.
+      SlotErase: begin
+        ecc_metadata_d[slot_dst_sel_ecc] = '0;
+      end
+
+      // All slots are invalidated and the FSM ends in Disabled/Invalid, so no slot is ever
+      // ECC-checked again.
+      SlotWipeAll,
+      SlotWipeInternalOnly: begin
+        ecc_metadata_d = '0;
+      end
+
+      default:;
+    endcase // unique case (update_sel)
+  end
+
 
   //////////////////////////
   // Main Control FSM
